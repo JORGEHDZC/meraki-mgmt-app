@@ -1,0 +1,16 @@
+/* src/pages/DashboardPage.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Alinea verticalmente */
+  align-items: center; /* Alinea horizontalmente */
+  height: 100vh; /* Ocupa toda la altura de la pantalla */
+  text-align: center; /* Alinea el texto al centro */
+}
+
+.grid-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}

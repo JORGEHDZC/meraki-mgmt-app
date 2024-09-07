@@ -1,0 +1,99 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.login-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw; /* Aseguramos que el contenedor ocupe el 100% del ancho */
+  background-color: #f5f5f5;
+}
+
+.login-form-container {
+  background-color: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%; /* Esto permitirá que el formulario se ajuste a pantallas más pequeñas */
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  border-color: #3f51b5;
+  outline: none;
+}
+
+button {
+  background-color: #1976d2; /* Azul primario de Material UI */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #1565c0; /* Azul ligeramente más oscuro para hover */
+}
+
+button:disabled {
+  background-color: #90caf9; /* Azul más claro cuando está deshabilitado */
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #f44336;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+p {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+a {
+  color: #3f51b5;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
