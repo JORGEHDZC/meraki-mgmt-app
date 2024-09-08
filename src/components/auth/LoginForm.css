@@ -56,17 +56,7 @@ input:focus {
   outline: none;
 }
 
-button {
-  background-color: #1976d2; /* Azul primario de Material UI */
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
-}
+
 
 button:hover {
   background-color: #1565c0; /* Azul ligeramente más oscuro para hover */

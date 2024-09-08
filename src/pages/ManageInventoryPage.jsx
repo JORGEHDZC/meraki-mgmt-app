@@ -1,5 +1,3 @@
-// src/pages/ManageInventoryPage.jsx
-
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -15,9 +13,31 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
+  Box,
+  Modal,
+  Backdrop,
+  Fade,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  styled
 } from "@mui/material";
-import { Edit, Delete, AddCircle, ArrowBack } from "@mui/icons-material";
+import { Edit, Delete, AddCircle, ArrowBack, Cancel, Delete as DeleteIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { db } from '../firebaseConfig'; // Importar Firestore
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { useMediaQuery, useTheme } from '@mui/material';
+
+// Styled components for button outlines
+const OutlinedButton = styled(Button)(({ theme, color }) => ({
+  borderColor: color,
+  color: color,
+  '&:hover': {
+    borderColor: color,
+    backgroundColor: `${ color }20`, // Slightly transparent color for hover
+  },
+}));
 
 const normalizeIngredient = (ingredient) => {
   return ingredient
@@ -37,45 +57,38 @@ const ManageInventoryPage = () => {
   const [ingredientToEdit, setIngredientToEdit] = useState("");
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [noResultsMessage, setNoResultsMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [openModal, setOpenModal] = useState(false); // Estado para el modal de confirmación
+  const [ingredientToDelete, setIngredientToDelete] = useState(""); // Estado para el ingrediente a eliminar
 
   const navigate = useNavigate();
+  const ingredientsCollectionRef = collection(db, 'ingredients');
+
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
+  const itemsPerPage = isSmallScreen ? 3 : isMediumScreen ? 5 : 10;
 
   useEffect(() => {
-    const savedIngredients =
-      JSON.parse(localStorage.getItem("ingredients")) || [];
-    const savedQuantities =
-      JSON.parse(localStorage.getItem("ingredientQuantities")) || {};
-    const savedCosts =
-      JSON.parse(localStorage.getItem("ingredientCosts")) || {};
+    const fetchIngredients = async () => {
+      const data = await getDocs(ingredientsCollectionRef);
+      setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    };
 
-    const ingredientsFromStorage = savedIngredients.map((ing) => ({
-      name: ing,
-      quantity: savedQuantities[normalizeIngredient(ing)] || "",
-      cost: savedCosts[normalizeIngredient(ing)] || "",
-    }));
+    fetchIngredients();
+  }, [itemsPerPage]);
 
-    console.log("Loaded ingredients:", ingredientsFromStorage); // Debugging line
-    setIngredients(ingredientsFromStorage);
+  useEffect(() => {
+    const handleResize = () => {
+      setCurrentPage(1);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const saveDataToLocalStorage = () => {
-    const savedQuantities = {};
-    const savedCosts = {};
-    ingredients.forEach((ingredient) => {
-      const normalizedIngredient = normalizeIngredient(ingredient.name);
-      if (ingredient.quantity) {
-        savedQuantities[normalizedIngredient] = ingredient.quantity;
-      }
-      if (ingredient.cost) {
-        savedCosts[normalizedIngredient] = ingredient.cost;
-      }
-    });
-    localStorage.setItem(
-      "ingredientQuantities",
-      JSON.stringify(savedQuantities)
-    );
-    localStorage.setItem("ingredientCosts", JSON.stringify(savedCosts));
-  };
 
   const handleIngredientChange = (e) => {
     setCurrentIngredient(e.target.value);
@@ -93,7 +106,7 @@ const ManageInventoryPage = () => {
     setCost(e.target.value);
   };
 
-  const handleSaveIngredient = () => {
+  const handleSaveIngredient = async () => {
     if (!currentIngredient.trim()) {
       setSnackbarMessage("El nombre del ingrediente no puede estar vacío");
       setSnackbarOpen(true);
@@ -117,37 +130,40 @@ const ManageInventoryPage = () => {
     }
 
     const normalizedIngredient = normalizeIngredient(currentIngredient);
-    const ingredientExists = ingredients.some(
-      (ingredient) =>
-        normalizeIngredient(ingredient.name) === normalizedIngredient
-    );
 
     if (editMode) {
-      setIngredients((prevIngredients) =>
-        prevIngredients.map((ingredient) =>
-          normalizeIngredient(ingredient.name) === normalizedIngredient
-            ? {
-                ...ingredient,
-                quantity,
-                cost,
-              }
-            : ingredient
-        )
-      );
+      const ingredientDoc = doc(db, 'ingredients', ingredientToEdit);
+      await updateDoc(ingredientDoc, {
+        name: currentIngredient.trim(),
+        quantity,
+        cost,
+        unit
+      });
       setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
     } else {
-      setIngredients((prevIngredients) => [
-        ...prevIngredients,
-        {
-          name: currentIngredient.trim(),
-          quantity,
-          cost,
-        },
-      ]);
+      const ingredientExists = ingredients.some(
+        (ingredient) =>
+          normalizeIngredient(ingredient.name) === normalizedIngredient
+      );
+
+      if (ingredientExists) {
+        setSnackbarMessage("El ingrediente ya existe");
+        setSnackbarOpen(true);
+        return;
+      }
+
+      await addDoc(ingredientsCollectionRef, {
+        name: currentIngredient.trim(),
+        quantity,
+        cost,
+        unit
+      });
       setSnackbarMessage(`${currentIngredient} agregado correctamente`);
     }
 
-    saveDataToLocalStorage();
+    const data = await getDocs(ingredientsCollectionRef);
+    setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+
     setCurrentIngredient("");
     setQuantity("");
     setCost("");
@@ -156,15 +172,13 @@ const ManageInventoryPage = () => {
     setSnackbarOpen(true);
   };
 
-  const handleDeleteIngredient = (ingredient) => {
-    setIngredients((prevIngredients) =>
-      prevIngredients.filter(
-        (ing) =>
-          normalizeIngredient(ing.name) !== normalizeIngredient(ingredient.name)
-      )
-    );
-    saveDataToLocalStorage();
-    setSnackbarMessage(`${ingredient.name} eliminado correctamente`);
+  const handleDeleteIngredient = async () => {
+    const ingredientDoc = doc(db, 'ingredients', ingredientToDelete);
+    await deleteDoc(ingredientDoc);
+    const data = await getDocs(ingredientsCollectionRef);
+    setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    setSnackbarMessage("Ingrediente eliminado correctamente");
+    setOpenModal(false); // Cerrar el modal
     setSnackbarOpen(true);
   };
 
@@ -172,114 +186,223 @@ const ManageInventoryPage = () => {
     setCurrentIngredient(ingredient.name);
     setQuantity(ingredient.quantity || "");
     setCost(ingredient.cost || "");
-    setUnit("gramos");
+    setUnit(ingredient.unit || "gramos");
     setEditMode(true);
-    setIngredientToEdit(ingredient.name);
+    setIngredientToEdit(ingredient.id);
   };
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    const filteredIngredients = ingredients.filter(ingredient =>
+      ingredient.name.toLowerCase().includes(e.target.value.toLowerCase())
+    );
+    if (filteredIngredients.length === 0 && e.target.value.trim() !== "") {
+      setNoResultsMessage(`${e.target.value} no existe, favor de agregarlo`);
+    } else {
+      setNoResultsMessage("");
+    }
+  };
+
+  const filteredIngredients = ingredients
+    .filter(ingredient =>
+      ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const indexOfLastIngredient = currentPage * itemsPerPage;
+  const indexOfFirstIngredient = indexOfLastIngredient - itemsPerPage;
+  const currentIngredients = filteredIngredients.slice(indexOfFirstIngredient, indexOfLastIngredient);
+
+  const handlePageChange = (direction) => {
+    setCurrentPage(prevPage => {
+      if (direction === 'next') {
+        return prevPage + 1;
+      } else if (direction === 'prev' && prevPage > 1) {
+        return prevPage - 1;
+      }
+      return prevPage;
+    });
+  };
+
+  const openDeleteModal = (ingredientId) => {
+    setIngredientToDelete(ingredientId);
+    setOpenModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setOpenModal(false);
+    setIngredientToDelete("");
+  };
+
   return (
-    <Container>
+    <Container sx={{ height: '100vh', overflow: 'auto', paddingBottom: '2rem' }}>
       <Typography variant="h4" gutterBottom>
         Gestión de Inventario
       </Typography>
 
-      <Button
-        variant="outlined"
-        color="secondary"
-        startIcon={<ArrowBack />}
-        onClick={() => navigate("/inventory")}
-      >
-        Regresar a Inventario
-      </Button>
+      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: theme.palette.background.paper, padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate("/dashboard")}
+        >
+          Regresar a Inventario
+        </Button>
+      </Box>
 
-      <TextField
-        label="Nombre del Ingrediente"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        value={currentIngredient}
-        onChange={handleIngredientChange}
-      />
+      <Box sx={{ paddingTop: '4rem' }}>
 
-      <TextField
-        label="Cantidad"
-        variant="outlined"
-        type="number"
-        fullWidth
-        margin="normal"
-        value={quantity}
-        onChange={handleQuantityChange}
-        InputProps={{
-          endAdornment: <InputAdornment position="end">{unit}</InputAdornment>,
-        }}
-      />
+        <Typography variant="h6" gutterBottom>
+          {editMode ? 'Editar Ingrediente' : 'Agregar Nuevo Ingrediente'}
+        </Typography>
 
-      <Select
-        value={unit}
-        onChange={handleUnitChange}
-        fullWidth
-        margin="normal"
-      >
-        <MenuItem value="mililitros">Mililitros</MenuItem>
-        <MenuItem value="gramos">Gramos</MenuItem>
-        <MenuItem value="piezas">Piezas</MenuItem>
-      </Select>
+        <TextField
+          label="Nombre del Ingrediente"
+          variant="outlined"
+          fullWidth
+          value={currentIngredient}
+          onChange={handleIngredientChange}
+          sx={{ marginBottom: '1rem' }}
+        />
 
-      <TextField
-        label="Costo por Unidad"
-        variant="outlined"
-        type="number"
-        step="0.01"
-        fullWidth
-        margin="normal"
-        value={cost}
-        onChange={handleCostChange}
-        InputProps={{
-          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-        }}
-      />
+        <TextField
+          label="Cantidad"
+          variant="outlined"
+          type="number"
+          fullWidth
+          value={quantity}
+          onChange={handleQuantityChange}
+          sx={{ marginBottom: '1rem' }}
+          InputProps={{
+            endAdornment: <InputAdornment position="end">{unit}</InputAdornment>,
+          }}
+        />
 
-      <Button
-        onClick={handleSaveIngredient}
-        variant="contained"
-        color="primary"
-        startIcon={<AddCircle />}
-      >
-        {editMode ? "Actualizar Ingrediente" : "Agregar Ingrediente"}
-      </Button>
+        <Select
+          value={unit}
+          onChange={handleUnitChange}
+          fullWidth
+          sx={{ marginBottom: '1rem' }}
+        >
+          <MenuItem value="gramos">Gramos</MenuItem>
+          <MenuItem value="mililitros">Mililitros</MenuItem>
+          <MenuItem value="piezas">Piezas</MenuItem>
+        </Select>
 
-      <List>
-        {ingredients.map((ingredient, index) => (
-          <ListItem key={index}>
-            <ListItemText
-              primary={ingredient.name}
-              secondary={`Cantidad: ${
-                ingredient.quantity || "N/A"
-              } ${unit} - Costo: ${ingredient.cost || "N/A"} MXN`}
-            />
-            <IconButton onClick={() => handleEditIngredient(ingredient)}>
-              <Edit />
-            </IconButton>
-            <IconButton onClick={() => handleDeleteIngredient(ingredient)}>
-              <Delete />
-            </IconButton>
-          </ListItem>
-        ))}
-      </List>
+        <TextField
+          label="Costo"
+          variant="outlined"
+          type="number"
+          fullWidth
+          value={cost}
+          onChange={handleCostChange}
+          sx={{ marginBottom: '1rem' }}
+          InputProps={{
+            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+          }}
+        />
 
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-      >
-        <Alert onClose={handleSnackbarClose} severity="info">
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSaveIngredient}
+        >
+          {editMode ? 'Actualizar Ingrediente' : 'Agregar Ingrediente'}
+        </Button>
+
+        <TextField
+          label="Buscar Ingredientes"
+          variant="outlined"
+          fullWidth
+          value={searchQuery}
+          onChange={handleSearchChange}
+          sx={{ marginBottom: '1rem', marginTop: '1rem' }}
+        />
+
+        {noResultsMessage && (
+          <Typography color="error" variant="body2" sx={{ marginTop: '1rem' }}>
+            {noResultsMessage}
+          </Typography>
+        )}
+
+        <List>
+          {currentIngredients.map((ingredient) => (
+            <ListItem key={ingredient.id}>
+              <ListItemText
+                primary={ingredient.name}
+                secondary={
+                  <div style={{ whiteSpace: 'pre-line', textAlign: 'left' }}>
+                    {`Cantidad: ${ingredient.quantity} ${ingredient.unit}\n Costo: $${ingredient.cost}`}
+                  </div>
+                }
+              />
+              <IconButton onClick={() => handleEditIngredient(ingredient)} edge="end">
+                <Edit />
+              </IconButton>
+              <IconButton onClick={() => openDeleteModal(ingredient.id)} edge="end">
+                <DeleteIcon />
+              </IconButton>
+            </ListItem>
+          ))}
+        </List>
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+          <OutlinedButton
+            variant="outlined"
+            onClick={() => handlePageChange('prev')}
+            disabled={currentPage === 1}
+            color="primary"
+          >
+            Anterior
+          </OutlinedButton>
+          <Typography variant="body2">
+            Página {currentPage}
+          </Typography>
+          <OutlinedButton
+            variant="outlined"
+            onClick={() => handlePageChange('next')}
+            disabled={indexOfLastIngredient >= filteredIngredients.length}
+            color="primary"
+          >
+            Siguiente
+          </OutlinedButton>
+        </Box>
+      </Box>
+
+      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleSnackbarClose}>
+        <Alert onClose={handleSnackbarClose} severity="success">
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={openModal}
+        onClose={closeDeleteModal}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">Confirmación de Eliminación</DialogTitle>
+        <DialogContent>
+          ¿Está seguro de que desea eliminar este ingrediente?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteModal} color="primary">
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDeleteIngredient}
+            color="error"
+            autoFocus
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

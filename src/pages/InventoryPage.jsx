@@ -10,15 +10,16 @@ import {
   Alert,
 } from "@mui/material";
 import { AddCircle, ArrowForward, ArrowBack } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom"; // Importar useNavigate
+import { useNavigate } from "react-router-dom"; 
+import { db } from "../firebaseConfig"; 
+import { collection, getDocs, addDoc, query, where } from "firebase/firestore";
 
-// Función para normalizar los nombres de ingredientes
 const normalizeIngredient = (ingredient) => {
   return ingredient
     .toLowerCase()
-    .normalize("NFD") // Normaliza los caracteres acentuados
-    .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
-    .trim(); // Elimina espacios adicionales
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 };
 
 const InventoryPage = () => {
@@ -28,56 +29,54 @@ const InventoryPage = () => {
   const [isIngredientNew, setIsIngredientNew] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const navigate = useNavigate(); // Inicializar useNavigate
+  const navigate = useNavigate();
 
-  // Cargar ingredientes desde localStorage al montar el componente
   useEffect(() => {
-    const savedIngredients =
-      JSON.parse(localStorage.getItem("ingredients")) || [];
-    setIngredients(savedIngredients);
+    const fetchIngredients = async () => {
+      const q = query(collection(db, "ingredients"));
+      const querySnapshot = await getDocs(q);
+      const ingredientsArray = querySnapshot.docs.map(doc => doc.data().name);
+      setIngredients(ingredientsArray);
+    };
+    
+    fetchIngredients();
   }, []);
 
-  // Guardar ingredientes en localStorage
-  const saveIngredientsToLocalStorage = (newIngredients) => {
-    localStorage.setItem("ingredients", JSON.stringify(newIngredients));
-    setIngredients(newIngredients);
+  const saveIngredientToFirestore = async (ingredient) => {
+    try {
+      await addDoc(collection(db, "ingredients"), {
+        name: ingredient,
+      });
+      setIngredients(prev => [...prev, ingredient]);
+    } catch (error) {
+      console.error("Error adding ingredient: ", error);
+    }
   };
 
-  // Función para manejar el cambio en el input y verificar si el ingrediente existe
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const value = e.target.value;
     setNewIngredient(value);
 
-    const savedIngredients =
-      JSON.parse(localStorage.getItem("ingredients")) || [];
-
-    // Normalizar el nuevo ingrediente
     const normalizedNewIngredient = normalizeIngredient(value);
-
-    // Verificar si el ingrediente ya existe en localStorage (búsqueda parcial)
-    const ingredientExists = savedIngredients.some((ingredient) =>
+    const ingredientExists = ingredients.some(ingredient =>
       normalizeIngredient(ingredient).includes(normalizedNewIngredient)
     );
 
     if (ingredientExists) {
-      // Si existe, cambiar el color a rojo y deshabilitar el botón
       setInputColor("red");
       setIsIngredientNew(false);
     } else {
-      // Si no existe, cambiar el color a verde y habilitar el botón
       setInputColor("green");
       setIsIngredientNew(true);
     }
   };
 
-  // Función para agregar un nuevo ingrediente
-  const addIngredient = () => {
+  const addIngredient = async () => {
     if (isIngredientNew && newIngredient.trim()) {
-      const updatedIngredients = [...ingredients, newIngredient.trim()];
-      saveIngredientsToLocalStorage(updatedIngredients);
-      setNewIngredient(""); // Limpiar el input
-      setInputColor(""); // Restablecer el color del input
-      setIsIngredientNew(false); // Deshabilitar el botón después de guardar
+      await saveIngredientToFirestore(newIngredient.trim());
+      setNewIngredient("");
+      setInputColor("");
+      setIsIngredientNew(false);
       setSnackbarMessage(`${newIngredient.trim()} fue ingresado correctamente`);
       setSnackbarOpen(true);
     } else if (!isIngredientNew && newIngredient.trim()) {
@@ -86,14 +85,12 @@ const InventoryPage = () => {
     }
   };
 
-  // Función para manejar el evento de tecla Enter
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       addIngredient();
     }
   };
 
-  // Función para cerrar el Snackbar
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
@@ -104,7 +101,6 @@ const InventoryPage = () => {
         Gestión de Inventario
       </Typography>
 
-      {/* Input para nuevo ingrediente */}
       <TextField
         label="Nuevo Ingrediente"
         variant="outlined"
@@ -112,8 +108,8 @@ const InventoryPage = () => {
         margin="normal"
         value={newIngredient}
         onChange={handleInputChange}
-        onKeyPress={handleKeyPress} // Añadir manejador de tecla Enter
-        style={{ borderColor: inputColor, color: inputColor }} // Cambia el color del borde y el texto según el estado
+        onKeyPress={handleKeyPress}
+        style={{ borderColor: inputColor, color: inputColor }}
         inputProps={{
           style: {
             color: inputColor,
@@ -121,18 +117,16 @@ const InventoryPage = () => {
         }}
       />
 
-      {/* Botón para agregar ingrediente */}
       <Button
         onClick={addIngredient}
         variant="contained"
         color="primary"
         startIcon={<AddCircle />}
-        disabled={!isIngredientNew} // Deshabilitar si el ingrediente ya existe
+        disabled={!isIngredientNew}
       >
         Guardar Ingrediente
       </Button>
 
-      {/* Botón para ir a la página de gestión */}
       <Button
         onClick={() => navigate("/manage-inventory")}
         variant="contained"
@@ -143,7 +137,6 @@ const InventoryPage = () => {
         Ir a Gestionar Inventario
       </Button>
 
-      {/* Botón para regresar al Dashboard */}
       <Button
         onClick={() => navigate("/dashboard")}
         variant="outlined"
@@ -154,7 +147,6 @@ const InventoryPage = () => {
         Regresar al Dashboard
       </Button>
 
-      {/* Snackbar para mostrar mensajes */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}

@@ -8,8 +8,9 @@ import DashboardPage from "./pages/DashboardPage";
 import CreateRecipePage from "./pages/CreateRecipePage";
 import InventoryPage from "./pages/InventoryPage";
 import ManageInventoryPage from "./pages/ManageInventoryPage";
-import CostReportPage from "./pages/CostReportPage";
 import RegisterPage from "./pages/RegisterPage";
+import RecipeDetailPage from "./pages/RecipeDetailPage";
+import EditRecipePage from "./pages/EditRecipePage";
 import { Container } from "@mui/material";
 
 const App = () => {
@@ -22,9 +23,10 @@ const App = () => {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/create-recipe" element={<CreateRecipePage />} />
+            <Route path="/recipe-detail" element={<RecipeDetailPage />} />
+            <Route path="/edit-recipe/:id" element={<EditRecipePage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/manage-inventory" element={<ManageInventoryPage />} />
-            <Route path="/cost-report" element={<CostReportPage />} />
           </Routes>
         </Container>
       </Router>

@@ -44,7 +44,7 @@ const DashboardPage = () => {
           <Button
             variant="contained"
             color="secondary"
-            onClick={() => navigate("/inventory")}
+            onClick={() => navigate("/manage-inventory")}
           >
             Gestionar Inventario
           </Button>
@@ -53,11 +53,12 @@ const DashboardPage = () => {
           <Button
             variant="contained"
             color="success"
-            onClick={() => navigate("/cost-report")}
+            onClick={() => navigate("/recipe-detail")}
           >
-            Ver Reporte de Costos
+            Ver Recetas
           </Button>
         </Grid>
+        
       </Grid>
 
       {/* Botón de cerrar sesión */}

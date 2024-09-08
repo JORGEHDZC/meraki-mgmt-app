@@ -44,7 +44,7 @@ const EditRecipePage = () => {
             ...ingredient,
             name: ingredientInfo.name,
             unit: ingredientInfo.unit,
-            cost_recipe: ingredientInfo.cost_recipe,
+            cost: ingredientInfo.cost,
             quantity: ingredientInfo.quantity,
           };
         }

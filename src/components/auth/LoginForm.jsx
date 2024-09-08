@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import Button from '@mui/material/Button';
 import "./LoginForm.css"; // Importa el archivo CSS
 
 const LoginForm = () => {
@@ -64,9 +65,9 @@ const LoginForm = () => {
 
           {formError && <div className="error-message">{formError}</div>}
 
-          <button type="submit" disabled={loading}>
+          <Button type="submit" variant="contained" disabled={loading}>
             {loading ? "Cargando..." : "Iniciar Sesión"}
-          </button>
+          </Button>
         </form>
         <p>
           ¿No tienes una cuenta? <Link to="/register">Regístrate aquí</Link>
