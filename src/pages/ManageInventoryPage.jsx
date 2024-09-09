@@ -14,23 +14,13 @@ import {
   Snackbar,
   Alert,
   Box,
-  Modal,
-  Backdrop,
-  Fade,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   styled,
 } from "@mui/material";
-import {
-  Edit,
-  Delete,
-  AddCircle,
-  ArrowBack,
-  Cancel,
-  Delete as DeleteIcon,
-} from "@mui/icons-material";
+import { Edit, Delete as DeleteIcon, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebaseConfig"; // Importar Firestore
 import {
@@ -40,16 +30,17 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  query,
 } from "firebase/firestore";
 import { useMediaQuery, useTheme } from "@mui/material";
 
 // Styled components for button outlines
-const OutlinedButton = styled(Button)(({ theme, color }) => ({
+const OutlinedButton = styled(Button)(({ color }) => ({
   borderColor: color,
   color: color,
   "&:hover": {
     borderColor: color,
-    backgroundColor: `${color}20`, // Slightly transparent color for hover
+    backgroundColor: `${color}20`,
   },
 }));
 
@@ -74,8 +65,8 @@ const ManageInventoryPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [noResultsMessage, setNoResultsMessage] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [openModal, setOpenModal] = useState(false); // Estado para el modal de confirmación
-  const [ingredientToDelete, setIngredientToDelete] = useState(""); // Estado para el ingrediente a eliminar
+  const [openModal, setOpenModal] = useState(false);
+  const [ingredientToDelete, setIngredientToDelete] = useState("");
 
   const navigate = useNavigate();
   const ingredientsCollectionRef = collection(db, "ingredients");
@@ -153,6 +144,11 @@ const ManageInventoryPage = () => {
         cost,
         unit,
       });
+      await handleUpdateIngredientCostOrQuantity(
+        ingredientToEdit,
+        cost,
+        quantity
+      );
       setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
     } else {
       const ingredientExists = ingredients.some(
@@ -192,7 +188,7 @@ const ManageInventoryPage = () => {
     const data = await getDocs(ingredientsCollectionRef);
     setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     setSnackbarMessage("Ingrediente eliminado correctamente");
-    setOpenModal(false); // Cerrar el modal
+    setOpenModal(false);
     setSnackbarOpen(true);
   };
 
@@ -253,6 +249,71 @@ const ManageInventoryPage = () => {
   const closeDeleteModal = () => {
     setOpenModal(false);
     setIngredientToDelete("");
+  };
+
+  // Función para actualizar las recetas que contienen el ingrediente modificado
+  const updateRecipesWithModifiedIngredient = async (
+    ingredientId,
+    newCost,
+    newQuantity
+  ) => {
+    try {
+      const q = query(collection(db, "recepies"));
+      const querySnapshot = await getDocs(q);
+
+      for (const recipeDoc of querySnapshot.docs) {
+        const recipeData = recipeDoc.data();
+
+        const updatedIngredients = recipeData.ingredients_list.map(
+          (ingredient) => {
+            if (ingredient.ingredient_id === ingredientId) {
+              const newCostByQuantityUsed = calculateNewCostByQuantityUsed(
+                newCost,
+                newQuantity,
+                ingredient.quantity_used
+              );
+              return {
+                ...ingredient,
+                cost: newCost,
+                quantity: newQuantity,
+                cost_by_quantity_used: newCostByQuantityUsed,
+              };
+            }
+            return ingredient;
+          }
+        );
+
+        const isUpdated = recipeData.ingredients_list.some(
+          (ingredient) => ingredient.ingredient_id === ingredientId
+        );
+
+        if (isUpdated) {
+          await updateDoc(doc(db, "recepies", recipeDoc.id), {
+            ingredients_list: updatedIngredients,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error actualizando las recetas:", error);
+    }
+  };
+
+  // Función para calcular el nuevo cost_by_quantity_used
+  const calculateNewCostByQuantityUsed = (cost, quantity, quantityUsed) => {
+    return ((cost / quantity) * quantityUsed).toFixed(2);
+  };
+
+  // Llama a esta función cuando se actualice el costo o la cantidad de un ingrediente
+  const handleUpdateIngredientCostOrQuantity = async (
+    ingredientId,
+    newCost,
+    newQuantity
+  ) => {
+    await updateRecipesWithModifiedIngredient(
+      ingredientId,
+      newCost,
+      newQuantity
+    );
   };
 
   return (
