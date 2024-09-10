@@ -22,16 +22,8 @@ import {
 } from "@mui/material";
 import { Edit, Delete as DeleteIcon, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebaseConfig"; // Importar Firestore
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-} from "firebase/firestore";
+import { db } from "../firebaseConfig";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, query, doc } from "firebase/firestore";
 import { useMediaQuery, useTheme } from "@mui/material";
 
 // Styled components for button outlines
@@ -118,11 +110,7 @@ const ManageInventoryPage = () => {
       return;
     }
 
-    if (
-      !quantity ||
-      isNaN(parseInt(quantity, 10)) ||
-      parseInt(quantity, 10) <= 0
-    ) {
+    if (!quantity || isNaN(parseInt(quantity, 10)) || parseInt(quantity, 10) <= 0) {
       setSnackbarMessage("La cantidad debe ser un número entero positivo");
       setSnackbarOpen(true);
       return;
@@ -144,16 +132,11 @@ const ManageInventoryPage = () => {
         cost,
         unit,
       });
-      await handleUpdateIngredientCostOrQuantity(
-        ingredientToEdit,
-        cost,
-        quantity
-      );
+      await handleUpdateIngredientCostOrQuantity(ingredientToEdit, cost, quantity);
       setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
     } else {
       const ingredientExists = ingredients.some(
-        (ingredient) =>
-          normalizeIngredient(ingredient.name) === normalizedIngredient
+        (ingredient) => normalizeIngredient(ingredient.name) === normalizedIngredient
       );
 
       if (ingredientExists) {
@@ -218,17 +201,12 @@ const ManageInventoryPage = () => {
   };
 
   const filteredIngredients = ingredients
-    .filter((ingredient) =>
-      ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter((ingredient) => ingredient.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const indexOfLastIngredient = currentPage * itemsPerPage;
   const indexOfFirstIngredient = indexOfLastIngredient - itemsPerPage;
-  const currentIngredients = filteredIngredients.slice(
-    indexOfFirstIngredient,
-    indexOfLastIngredient
-  );
+  const currentIngredients = filteredIngredients.slice(indexOfFirstIngredient, indexOfLastIngredient);
 
   const handlePageChange = (direction) => {
     setCurrentPage((prevPage) => {
@@ -251,12 +229,8 @@ const ManageInventoryPage = () => {
     setIngredientToDelete("");
   };
 
-  // Función para actualizar las recetas que contienen el ingrediente modificado
-  const updateRecipesWithModifiedIngredient = async (
-    ingredientId,
-    newCost,
-    newQuantity
-  ) => {
+  // Función para actualizar recetas cuando un ingrediente se modifica
+  const updateRecipesWithModifiedIngredient = async (ingredientId, newCost, newQuantity) => {
     try {
       const q = query(collection(db, "recepies"));
       const querySnapshot = await getDocs(q);
@@ -264,32 +238,29 @@ const ManageInventoryPage = () => {
       for (const recipeDoc of querySnapshot.docs) {
         const recipeData = recipeDoc.data();
 
-        const updatedIngredients = recipeData.ingredients_list.map(
-          (ingredient) => {
-            if (ingredient.ingredient_id === ingredientId) {
-              const newCostByQuantityUsed = calculateNewCostByQuantityUsed(
-                newCost,
-                newQuantity,
-                ingredient.quantity_used
-              );
-              return {
-                ...ingredient,
-                cost: newCost,
-                quantity: newQuantity,
-                cost_by_quantity_used: newCostByQuantityUsed,
-              };
-            }
-            return ingredient;
+        const updatedIngredients = recipeData.ingredients_list.map((ingredient) => {
+          if (ingredient.ingredient_id === ingredientId) {
+            const newCostByQuantityUsed = calculateNewCostByQuantityUsed(
+              newCost,
+              newQuantity,
+              ingredient.quantity_used
+            );
+            return {
+              ...ingredient,
+              cost: newCost,
+              quantity: newQuantity,
+              cost_by_quantity_used: newCostByQuantityUsed,
+            };
           }
-        );
+          return ingredient;
+        });
 
-        const isUpdated = recipeData.ingredients_list.some(
-          (ingredient) => ingredient.ingredient_id === ingredientId
-        );
+        const updatedRecipeCost = recalculateRecipeTotalCost(updatedIngredients);
 
-        if (isUpdated) {
+        if (recipeData.ingredients_list.some((ingredient) => ingredient.ingredient_id === ingredientId)) {
           await updateDoc(doc(db, "recepies", recipeDoc.id), {
             ingredients_list: updatedIngredients,
+            cost_recipe: updatedRecipeCost,
           });
         }
       }
@@ -303,23 +274,20 @@ const ManageInventoryPage = () => {
     return ((cost / quantity) * quantityUsed).toFixed(2);
   };
 
+  // Función para recalcular el costo total de la receta
+  const recalculateRecipeTotalCost = (ingredients_list) => {
+    return ingredients_list
+      .reduce((total, ing) => total + parseFloat(ing.cost_by_quantity_used), 0)
+      .toFixed(2);
+  };
+
   // Llama a esta función cuando se actualice el costo o la cantidad de un ingrediente
-  const handleUpdateIngredientCostOrQuantity = async (
-    ingredientId,
-    newCost,
-    newQuantity
-  ) => {
-    await updateRecipesWithModifiedIngredient(
-      ingredientId,
-      newCost,
-      newQuantity
-    );
+  const handleUpdateIngredientCostOrQuantity = async (ingredientId, newCost, newQuantity) => {
+    await updateRecipesWithModifiedIngredient(ingredientId, newCost, newQuantity);
   };
 
   return (
-    <Container
-      sx={{ height: "100vh", overflow: "auto", paddingBottom: "2rem" }}
-    >
+    <Container sx={{ height: "100vh", overflow: "auto", paddingBottom: "2rem" }}>
       <Typography variant="h4" gutterBottom>
         Gestión de Inventario
       </Typography>
@@ -371,9 +339,7 @@ const ManageInventoryPage = () => {
           onChange={handleQuantityChange}
           sx={{ marginBottom: "1rem" }}
           InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">{unit}</InputAdornment>
-            ),
+            endAdornment: <InputAdornment position="end">{unit}</InputAdornment>,
           }}
         />
 
@@ -401,11 +367,7 @@ const ManageInventoryPage = () => {
           }}
         />
 
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSaveIngredient}
-        >
+        <Button variant="contained" color="primary" onClick={handleSaveIngredient}>
           {editMode ? "Actualizar Ingrediente" : "Agregar Ingrediente"}
         </Button>
 
@@ -435,35 +397,18 @@ const ManageInventoryPage = () => {
                   </div>
                 }
               />
-              <IconButton
-                onClick={() => handleEditIngredient(ingredient)}
-                edge="end"
-              >
+              <IconButton onClick={() => handleEditIngredient(ingredient)} edge="end">
                 <Edit />
               </IconButton>
-              <IconButton
-                onClick={() => openDeleteModal(ingredient.id)}
-                edge="end"
-              >
+              <IconButton onClick={() => openDeleteModal(ingredient.id)} edge="end">
                 <DeleteIcon />
               </IconButton>
             </ListItem>
           ))}
         </List>
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: "1rem",
-          }}
-        >
-          <OutlinedButton
-            variant="outlined"
-            onClick={() => handlePageChange("prev")}
-            disabled={currentPage === 1}
-            color="primary"
-          >
+        <Box sx={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}>
+          <OutlinedButton variant="outlined" onClick={() => handlePageChange("prev")} disabled={currentPage === 1} color="primary">
             Anterior
           </OutlinedButton>
           <Typography variant="body2">Página {currentPage}</Typography>
@@ -478,25 +423,14 @@ const ManageInventoryPage = () => {
         </Box>
       </Box>
 
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-      >
+      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleSnackbarClose}>
         <Alert onClose={handleSnackbarClose} severity="success">
           {snackbarMessage}
         </Alert>
       </Snackbar>
 
-      <Dialog
-        open={openModal}
-        onClose={closeDeleteModal}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          Confirmación de Eliminación
-        </DialogTitle>
+      <Dialog open={openModal} onClose={closeDeleteModal} aria-labelledby="alert-dialog-title" aria-describedby="alert-dialog-description">
+        <DialogTitle id="alert-dialog-title">Confirmación de Eliminación</DialogTitle>
         <DialogContent>
           ¿Está seguro de que desea eliminar este ingrediente?
         </DialogContent>

@@ -64,7 +64,7 @@ const RecipeDetailPage = () => {
 
   return (
     <div>
-      <h1>Recipe List</h1>
+      <h1>Recetas Disponibles</h1>
 
       <Button variant="contained" color="primary" onClick={goToDashboard}>
         Regresar al Dashboard
