@@ -21,8 +21,9 @@ import {
 import { Delete } from "@mui/icons-material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { db } from "../firebaseConfig"; // Asegúrate de importar tu configuración de Firebase
-import { collection, addDoc, getDocs, query } from "firebase/firestore";
+import { db, storage } from "../firebaseConfig"; // Asegúrate de importar tu configuración de Firebase y Storage
+import { collection, addDoc, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Importar funciones de Storage para cargar imagenes
 import { useNavigate } from "react-router-dom"; // Importa el hook para la navegación
 
 const CreateRecipePage = () => {
@@ -36,18 +37,15 @@ const CreateRecipePage = () => {
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [ingredientToDelete, setIngredientToDelete] = useState(null);
+  const [imageFile, setImageFile] = useState(null); // Estado para la imagen
+  const [imageUrl, setImageUrl] = useState(""); // URL de la imagen cargada
+  const [loading, setLoading] = useState(false); // Para controlar el estado de carga de la imagen
 
   const navigate = useNavigate(); // Instancia del hook para la navegación
 
-  const handleGoBack = () => {
-    navigate("/dashboard"); // Cambia '/dashboard' por la ruta a la que quieres que navegue
-  };
-
   useEffect(() => {
     const fetchIngredients = async () => {
-      const q = query(collection(db, "ingredients"));
+      const q = collection(db, "ingredients");
       const querySnapshot = await getDocs(q);
       const ingredients = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -61,6 +59,7 @@ const CreateRecipePage = () => {
   }, []);
 
   useEffect(() => {
+    // Filtrar las opciones de ingredientes para excluir los ingredientes ya añadidos
     const filtered = ingredientOptions.filter(
       (ingredient) =>
         !ingredientsList.some(
@@ -69,6 +68,24 @@ const CreateRecipePage = () => {
     );
     setFilteredOptions(filtered);
   }, [ingredientsList, ingredientOptions]);
+
+  // Función para manejar la selección de imagen
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
+  // Función para subir la imagen a Firebase Storage
+  const uploadImageToStorage = async () => {
+    if (imageFile) {
+      const storageRef = ref(storage, `recipes/${imageFile.name}`);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return downloadURL;
+    }
+    return null;
+  };
 
   const handleAddIngredient = () => {
     if (ingredientInput) {
@@ -96,15 +113,6 @@ const CreateRecipePage = () => {
     }
   };
 
-  const handleDeleteIngredient = (ingredientId) => {
-    setIngredientsList((prevList) =>
-      prevList.filter((ing) => ing.id !== ingredientId)
-    );
-    setOpenDeleteModal(false);
-    setSnackbarMessage("Ingrediente eliminado");
-    setSnackbarOpen(true);
-  };
-
   const calculateTotalCost = () => {
     return ingredientsList
       .reduce((total, ing) => total + parseFloat(ing.costByQuantityUsed), 0)
@@ -112,6 +120,12 @@ const CreateRecipePage = () => {
   };
 
   const handleSaveRecipe = async () => {
+    setLoading(true); // Iniciar la carga
+    let imageUrl = "";
+    if (imageFile) {
+      imageUrl = await uploadImageToStorage(); // Subir imagen a Firebase Storage
+    }
+
     if (
       recipeName &&
       quantityPortions &&
@@ -128,20 +142,24 @@ const CreateRecipePage = () => {
         quantity_portions: parseInt(quantityPortions, 10),
         cost_recipe: calculateTotalCost(),
         create_date: createDate,
+        image_url: imageUrl, // Agregar la URL de la imagen
       };
 
+      // Imprimir en consola para verificar los datos antes de guardarlos
       console.log("Datos de la receta:", recipeData);
 
       try {
-        await addDoc(collection(db, "recepies"), recipeData);
+        await addDoc(collection(db, "recepies"), recipeData); // Guardar la receta en Firestore
         setSnackbarMessage("Receta guardada exitosamente");
         setSnackbarOpen(true);
 
-        // Reset fields after saving
+        // Resetear campos después de guardar
         setRecipeName("");
         setQuantityPortions("");
         setIngredientsList([]);
         setCreateDate(new Date());
+        setImageFile(null);
+        setImageUrl("");
       } catch (error) {
         console.error("Error al guardar la receta:", error);
         setSnackbarMessage("Error al guardar la receta");
@@ -151,13 +169,14 @@ const CreateRecipePage = () => {
       setSnackbarMessage("Complete todos los campos requeridos");
       setSnackbarOpen(true);
     }
+
+    setLoading(false); // Terminar la carga
   };
 
   return (
     <Container
       sx={{ height: "100vh", display: "flex", flexDirection: "column" }}
     >
-      {/* Contenedor con barra de desplazamiento */}
       <Box sx={{ flexGrow: 1, overflowY: "auto", paddingRight: "1rem" }}>
         <Typography variant="h4" gutterBottom>
           Crear Nueva Receta
@@ -206,9 +225,7 @@ const CreateRecipePage = () => {
           onChange={(e) => setQuantityUsed(e.target.value)}
           sx={{ marginBottom: "1rem" }}
           InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">Unidad</InputAdornment>
-            ),
+            endAdornment: <InputAdornment position="end">Unidad</InputAdornment>,
           }}
         />
 
@@ -221,28 +238,24 @@ const CreateRecipePage = () => {
           Añadir Ingrediente
         </Button>
 
-        <Typography variant="h6" gutterBottom>
-          Ingredientes Añadidos
-        </Typography>
+        {/* Botón para subir una imagen */}
+        <Typography variant="h6">Subir Imagen de la Receta</Typography>
+        <Button
+          variant="contained"
+          component="label"
+          sx={{ marginBottom: "1rem" }}
+        >
+          Seleccionar Imagen
+          <input type="file" hidden onChange={handleImageChange} />
+        </Button>
 
-        <List>
-          {ingredientsList.map((ingredient) => (
-            <ListItem key={ingredient.id}>
-              <ListItemText
-                primary={`${ingredient.name} - ${ingredient.quantityUsed} ${ingredient.unit}`}
-                secondary={`Costo: $${ingredient.costByQuantityUsed}`}
-              />
-              <IconButton
-                onClick={() => {
-                  setOpenDeleteModal(true);
-                  setIngredientToDelete(ingredient.id);
-                }}
-              >
-                <Delete />
-              </IconButton>
-            </ListItem>
-          ))}
-        </List>
+        {/* Renderizar imagen si existe */}
+        {imageUrl && (
+          <Box sx={{ marginBottom: "1rem" }}>
+            <Typography variant="h6">Vista Previa de la Imagen:</Typography>
+            <img src={imageUrl} alt="Receta" width="100%" />
+          </Box>
+        )}
 
         <TextField
           label="Costo Total de la Receta"
@@ -264,7 +277,6 @@ const CreateRecipePage = () => {
         />
       </Box>
 
-      {/* Botones de Guardar y Regresar */}
       <Box
         sx={{
           display: "flex",
@@ -276,41 +288,16 @@ const CreateRecipePage = () => {
           variant="contained"
           color="primary"
           onClick={handleSaveRecipe}
-          disabled={
-            !recipeName ||
-            !quantityPortions ||
-            ingredientsList.length < 3 ||
-            !createDate
-          }
+          disabled={loading} // Deshabilitar botón durante la carga
         >
-          Guardar Receta
+          {loading ? "Guardando..." : "Guardar Receta"}
         </Button>
 
-        <Button variant="contained" color="error" onClick={handleGoBack}>
+        <Button variant="contained" color="error" onClick={() => navigate("/dashboard")}>
           Regresar al Dashboard
         </Button>
       </Box>
 
-      {/* Dialog de confirmación de eliminación */}
-      <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <Typography>¿Deseas eliminar este ingrediente?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteModal(false)}>Cancelar</Button>
-          <Button
-            onClick={() =>
-              ingredientToDelete && handleDeleteIngredient(ingredientToDelete)
-            }
-            color="error"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar para mostrar mensajes */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
