@@ -1,10 +1,11 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext } from 'react';
+import { Container, TextField, Button, Box, Typography, Avatar, Grid } from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import Button from '@mui/material/Button';
-import "./LoginForm.css"; // Importa el archivo CSS
 
 const LoginForm = () => {
+
   const { login, loading } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -31,49 +32,72 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="login-page-container">
-      {" "}
-      {/* Contenedor principal */}
-      <div className="login-form-container">
-        {" "}
-        {/* Solo el formulario centrado */}
-        <h2>Iniciar Sesión</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Correo Electrónico:</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ingresa tu correo electrónico"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Contraseña:</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Ingresa tu contraseña"
-              required
-            />
-          </div>
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+          <LockOutlinedIcon />
+        </Avatar>
+        <Typography component="h1" variant="h5">
+          Iniciar Sesión
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Correo Electrónico"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Contraseña"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
           {formError && <div className="error-message">{formError}</div>}
 
-          <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? "Cargando..." : "Iniciar Sesión"}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+          >
+            Iniciar Sesión
           </Button>
-        </form>
-        <p>
-          ¿No tienes una cuenta? <Link to="/register">Regístrate aquí</Link>
-        </p>
-      </div>
-    </div>
+          <Grid container>
+            <Grid item xs>
+              <Button variant="text" size="small">
+                ¿Olvidaste tu contraseña?
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button variant="text" size="small">
+                <Link to="/register">Regístrate aquí</Link>
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+    </Container>
   );
 };
 
