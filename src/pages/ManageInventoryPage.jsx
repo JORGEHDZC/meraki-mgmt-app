@@ -1,40 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {
-  Container,
-  Typography,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  InputAdornment,
-  Snackbar,
-  Alert,
-  Box,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  styled,
-} from "@mui/material";
-import { Edit, Delete as DeleteIcon, ArrowBack } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebaseConfig";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, query, doc } from "firebase/firestore";
-import { useMediaQuery, useTheme } from "@mui/material";
-
-// Styled components for button outlines
-const OutlinedButton = styled(Button)(({ color }) => ({
-  borderColor: color,
-  color: color,
-  "&:hover": {
-    borderColor: color,
-    backgroundColor: `${color}20`,
-  },
-}));
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query } from "firebase/firestore";
 
 const normalizeIngredient = (ingredient) => {
   return ingredient
@@ -63,11 +30,7 @@ const ManageInventoryPage = () => {
   const navigate = useNavigate();
   const ingredientsCollectionRef = collection(db, "ingredients");
 
-  const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
-  const isMediumScreen = useMediaQuery(theme.breakpoints.between("sm", "md"));
-
-  const itemsPerPage = isSmallScreen ? 3 : isMediumScreen ? 5 : 10;
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchIngredients = async () => {
@@ -76,15 +39,6 @@ const ManageInventoryPage = () => {
     };
 
     fetchIngredients();
-  }, [itemsPerPage]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setCurrentPage(1);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const handleIngredientChange = (e) => {
@@ -134,6 +88,10 @@ const ManageInventoryPage = () => {
       });
       await handleUpdateIngredientCostOrQuantity(ingredientToEdit, cost, quantity);
       setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
+      setSnackbarOpen(true);
+      setTimeout(() => {
+        setSnackbarOpen(false);
+      }, 1500);
     } else {
       const ingredientExists = ingredients.some(
         (ingredient) => normalizeIngredient(ingredient.name) === normalizedIngredient
@@ -287,163 +245,165 @@ const ManageInventoryPage = () => {
   };
 
   return (
-    <Container sx={{ height: "100vh", overflow: "auto", paddingBottom: "2rem" }}>
-      <Typography variant="h4" gutterBottom>
-        Gestión de Inventario
-      </Typography>
+    <div className="container mx-auto p-4">
+      <h1 className="text-4xl font-bold mb-4">Gestión de Inventario</h1>
 
-      <Box
-        sx={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          backgroundColor: theme.palette.background.paper,
-          padding: "1rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Button
-          variant="outlined"
-          color="secondary"
-          startIcon={<ArrowBack />}
+      <div className="mb-4">
+        <button
+          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
           onClick={() => navigate("/dashboard")}
         >
           Regresar a Inventario
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <Box sx={{ paddingTop: "4rem" }}>
-        <Typography variant="h6" gutterBottom>
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold mb-2">
           {editMode ? "Editar Ingrediente" : "Agregar Nuevo Ingrediente"}
-        </Typography>
+        </h2>
 
-        <TextField
-          label="Nombre del Ingrediente"
-          variant="outlined"
-          fullWidth
+        <input
+          type="text"
+          placeholder="Nombre del Ingrediente"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={currentIngredient}
           onChange={handleIngredientChange}
-          sx={{ marginBottom: "1rem" }}
         />
 
-        <TextField
-          label="Cantidad"
-          variant="outlined"
+        <input
           type="number"
-          fullWidth
+          placeholder="Cantidad"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={quantity}
           onChange={handleQuantityChange}
-          sx={{ marginBottom: "1rem" }}
-          InputProps={{
-            endAdornment: <InputAdornment position="end">{unit}</InputAdornment>,
-          }}
         />
 
-        <Select
+        <select
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={unit}
           onChange={handleUnitChange}
-          fullWidth
-          sx={{ marginBottom: "1rem" }}
         >
-          <MenuItem value="gramos">Gramos</MenuItem>
-          <MenuItem value="mililitros">Mililitros</MenuItem>
-          <MenuItem value="piezas">Piezas</MenuItem>
-        </Select>
+          <option value="gramos">Gramos</option>
+          <option value="mililitros">Mililitros</option>
+          <option value="piezas">Piezas</option>
+        </select>
 
-        <TextField
-          label="Costo"
-          variant="outlined"
+        <input
           type="number"
-          fullWidth
+          placeholder="Costo"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={cost}
           onChange={handleCostChange}
-          sx={{ marginBottom: "1rem" }}
-          InputProps={{
-            startAdornment: <InputAdornment position="start">$</InputAdornment>,
-          }}
         />
 
-        <Button variant="contained" color="primary" onClick={handleSaveIngredient}>
+        <button
+          className="w-full mb-4 bg-blue-500 text-white p-2 rounded-md"
+          onClick={handleSaveIngredient}
+        >
           {editMode ? "Actualizar Ingrediente" : "Agregar Ingrediente"}
-        </Button>
+        </button>
 
-        <TextField
-          label="Buscar Ingredientes"
-          variant="outlined"
-          fullWidth
+        <input
+          type="text"
+          placeholder="Buscar Ingredientes"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={searchQuery}
           onChange={handleSearchChange}
-          sx={{ marginBottom: "1rem", marginTop: "1rem" }}
         />
 
         {noResultsMessage && (
-          <Typography color="error" variant="body2" sx={{ marginTop: "1rem" }}>
-            {noResultsMessage}
-          </Typography>
+          <p className="text-red-500">{noResultsMessage}</p>
         )}
 
-        <List>
+        <ul className="mb-4">
           {currentIngredients.map((ingredient) => (
-            <ListItem key={ingredient.id}>
-              <ListItemText
-                primary={ingredient.name}
-                secondary={
-                  <div style={{ whiteSpace: "pre-line", textAlign: "left" }}>
-                    {`Cantidad: ${ingredient.quantity} ${ingredient.unit}\n Costo: $${ingredient.cost}`}
-                  </div>
-                }
-              />
-              <IconButton onClick={() => handleEditIngredient(ingredient)} edge="end">
-                <Edit />
-              </IconButton>
-              <IconButton onClick={() => openDeleteModal(ingredient.id)} edge="end">
-                <DeleteIcon />
-              </IconButton>
-            </ListItem>
+            <li
+              key={ingredient.id}
+              className="flex justify-between items-center border-b py-2"
+            >
+              <div className="flex flex-col">
+                <span className="font-bold">{ingredient.name}</span>
+                <ul className="text-left space-y-1">
+                  <li>
+                    <span className="text-gray-500">Cantidad: {ingredient.quantity} {ingredient.unit} </span>
+                  </li>
+                  <li>
+                    <span className="text-gray-500">Costo: ${ingredient.cost} </span>
+                  </li>
+                </ul>
+              </div>
+              <div className="flex">
+                <button
+                  className="text-blue-500 mr-2"
+                  onClick={() => handleEditIngredient(ingredient)}
+                >
+                  Editar
+                </button>
+                <button
+                  className="text-red-500"
+                  onClick={() => openDeleteModal(ingredient.id)}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </li>
           ))}
-        </List>
+        </ul>
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}>
-          <OutlinedButton variant="outlined" onClick={() => handlePageChange("prev")} disabled={currentPage === 1} color="primary">
+        <div className="flex justify-between">
+          <button
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+            onClick={() => handlePageChange("prev")}
+            disabled={currentPage === 1}
+          >
             Anterior
-          </OutlinedButton>
-          <Typography variant="body2">Página {currentPage}</Typography>
-          <OutlinedButton
-            variant="outlined"
+          </button>
+          <span>Página {currentPage}</span>
+          <button
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
             onClick={() => handlePageChange("next")}
             disabled={indexOfLastIngredient >= filteredIngredients.length}
-            color="primary"
           >
             Siguiente
-          </OutlinedButton>
-        </Box>
-      </Box>
+          </button>
+        </div>
+      </div>
 
-      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleSnackbarClose}>
-        <Alert onClose={handleSnackbarClose} severity="success">
+      {snackbarOpen && (
+        <div className="fixed bottom-4 left-4 bg-green-500 text-white p-4 rounded-md">
           {snackbarMessage}
-        </Alert>
-      </Snackbar>
+        </div>
+      )}
 
-      <Dialog open={openModal} onClose={closeDeleteModal} aria-labelledby="alert-dialog-title" aria-describedby="alert-dialog-description">
-        <DialogTitle id="alert-dialog-title">Confirmación de Eliminación</DialogTitle>
-        <DialogContent>
-          ¿Está seguro de que desea eliminar este ingrediente?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDeleteModal} color="primary">
-            Cancelar
-          </Button>
-          <Button onClick={handleDeleteIngredient} color="error" autoFocus>
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+      {openModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-4 rounded-md relative">
+            <button
+              className="absolute top-0 right-0 m-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setOpenModal(false)}
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-2">Confirmación de Eliminación</h2>
+            <p>¿Está seguro de que desea eliminar este ingrediente?</p>
+            <div className="flex justify-end mt-4">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded-md mr-2"
+                onClick={closeDeleteModal}
+              >
+                Cancelar
+              </button>
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded-md"
+                onClick={handleDeleteIngredient}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
