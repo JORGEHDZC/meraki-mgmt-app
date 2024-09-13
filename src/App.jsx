@@ -12,6 +12,7 @@ import RegisterPage from "./pages/RegisterPage";
 import RecipeDetailPage from "./pages/RecipeDetailPage";
 import EditRecipePage from "./pages/EditRecipePage";
 import { Container } from "@mui/material";
+import './styles/globals.css';
 
 const App = () => {
   return (

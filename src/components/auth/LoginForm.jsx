@@ -1,104 +1,79 @@
-import React, { useState, useContext } from 'react';
-import { Container, TextField, Button, Box, Typography, Avatar, Grid } from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+'use client'
 
-const LoginForm = () => {
+import { useState, useContext } from 'react'
+import { LockIcon } from 'lucide-react'
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
-  const { login, loading } = useContext(AuthContext);
+// Assuming you have an AuthContext
+import { AuthContext } from "@/context/AuthContext"
+
+export default function LoginForm() {
+  const { login } = useContext(AuthContext)
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [formError, setFormError] = useState(null);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [formError, setFormError] = useState(null)
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!email || !password) {
-      setFormError("Por favor, completa todos los campos.");
-      return;
+      setFormError("Por favor, completa todos los campos.")
+      return
     }
 
     try {
-      await login(email, password);
-      setFormError(null);
-      navigate("/dashboard");
+      await login(email, password)
+      setFormError(null)
+      navigate("/dashboard")
     } catch (err) {
-      setFormError(err.message);
+      setFormError(err instanceof Error ? err.message : "An error occurred")
     }
-  };
+  }
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-          <LockOutlinedIcon />
-        </Avatar>
-        <Typography component="h1" variant="h5">
-          Iniciar Sesión
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
+    <div className="container mx-auto max-w-md mt-8">
+      <div className="flex flex-col items-center">
+        <div className="bg-secondary p-3 rounded-full mb-4">
+          <LockIcon className="h-6 w-6 text-secondary-foreground" />
+        </div>
+        <h1 className="text-2xl font-bold mb-6">Iniciar Sesión</h1>
+        <form onSubmit={handleSubmit} className="w-full space-y-4">
+          <Input
+            type="email"
             id="email"
-            label="Correo Electrónico"
-            name="email"
-            autoComplete="email"
-            autoFocus
+            placeholder="Correo Electrónico"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full"
           />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Contraseña"
+          <Input
             type="password"
             id="password"
-            autoComplete="current-password"
+            placeholder="Contraseña"
+            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full"
           />
-
-          {formError && <div className="error-message">{formError}</div>}
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
+          {formError && <p className="text-red-500 text-sm">{formError}</p>}
+          <Button type="submit" className="w-full">
             Iniciar Sesión
           </Button>
-          <Grid container>
-            <Grid item xs>
-              <Button variant="text" size="small">
-                ¿Olvidaste tu contraseña?
-              </Button>
-            </Grid>
-            <Grid item>
-              <Button variant="text" size="small">
-                <Link to="/register">Regístrate aquí</Link>
-              </Button>
-            </Grid>
-          </Grid>
-        </Box>
-      </Box>
-    </Container>
-  );
-};
-
-export default LoginForm;
+          <div className="flex justify-between text-sm">
+            <Button variant="link" size="sm">
+              ¿Olvidaste tu contraseña?
+            </Button>
+            <Button variant="link" size="sm" asChild onClick={() => navigate("/register")}>
+             Regístrate aquí
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

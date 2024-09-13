@@ -1,10 +1,12 @@
+import { Button } from "@/components/ui/Button";
 import React, { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Container, Typography, Button, Grid } from "@mui/material";
-import "./DashboardPage.css";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
+import { BookOpen, ClipboardList, PlusCircle, LogOut } from "lucide-react";
 
-const DashboardPage = () => {
+export default function Dashboard() {
+
   const { user, logout } = useContext(AuthContext); // Obtenemos el contexto de autenticación
   const navigate = useNavigate();
 
@@ -12,65 +14,38 @@ const DashboardPage = () => {
     logout();
     navigate("/"); // Redirigimos al login después del logout
   };
-
   return (
-    <Container className="container">
-      <Typography variant="h4" gutterBottom>
-        Bienvenido al Dashboard, {user ? "Usuario" : "Invitado"}!
-      </Typography>
-
-      <Typography variant="body1" paragraph>
-        Este es tu panel principal donde puedes gestionar tus recetas,
-        ingredientes, y más.
-      </Typography>
-
-      {/* Sección de botones o enlaces para navegar por las diferentes secciones */}
-      <Grid
-        container
-        spacing={2}
-        justifyContent="center"
-        className="grid-buttons"
-      >
-        <Grid item>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate("/create-recipe")}
-          >
+    <div className="min-h-screen bg-gray-100 p-8">
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center text-primary">
+            Bienvenido al Dashboard, Usuario!
+          </CardTitle>
+          <CardDescription className="text-center text-lg mt-2">
+            Este es tu panel principal donde puedes gestionar tus recetas, ingredientes, y más.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Button className="h-32 text-lg font-semibold" onClick={() => navigate("/create-recipe")}>
+            <PlusCircle className="mr-2 h-6 w-6" />
             Crear Nueva Receta
           </Button>
-        </Grid>
-        <Grid item>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => navigate("/manage-inventory")}
-          >
+          <Button className="h-32 text-lg font-semibold" onClick={() => navigate("/manage-inventory")}>
+            <ClipboardList className="mr-2 h-6 w-6" />
             Gestionar Inventario
           </Button>
-        </Grid>
-        <Grid item>
-          <Button
-            variant="contained"
-            color="success"
-            onClick={() => navigate("/recipe-detail")}
-          >
+          <Button className="h-32 text-lg font-semibold" onClick={() => navigate("/recipe-detail")}>
+            <BookOpen className="mr-2 h-6 w-6" />
             Ver Recetas
           </Button>
-        </Grid>
-        
-      </Grid>
-
-      {/* Botón de cerrar sesión */}
-      <Grid container justifyContent="flex-end" style={{ marginTop: "20px" }}>
-        <Grid item>
-          <Button variant="outlined" color="error" onClick={handleLogout}>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button className="mt-4 bg-red-500 hover:bg-red-600 text-white" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
             Cerrar Sesión
           </Button>
-        </Grid>
-      </Grid>
-    </Container>
+        </CardFooter>
+      </Card>
+    </div>
   );
-};
-
-export default DashboardPage;
+}
