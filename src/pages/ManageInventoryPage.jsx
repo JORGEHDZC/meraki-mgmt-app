@@ -250,7 +250,7 @@ const ManageInventoryPage = () => {
 
       <div className="mb-4">
         <button
-          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+          className="bg-red-500 text-white px-4 py-2 rounded mb-4"
           onClick={() => navigate("/dashboard")}
         >
           Regresar a Inventario

@@ -150,7 +150,17 @@ const CreateRecipePage = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col h-screen overflow-y-auto">
+        
         <h1 className="text-4xl font-bold mb-4">Crear Nueva Receta</h1>
+
+        <div className="mb-4">
+        <button
+            className="bg-red-500 text-white px-4 py-2 rounded mb-4"
+            onClick={() => navigate("/dashboard")}
+          >
+            Regresar al Dashboard
+          </button>
+        </div>
 
         <input
           type="text"
@@ -243,18 +253,13 @@ const CreateRecipePage = () => {
 
         <div className="flex justify-between">
           <button
-            className="w-1/2 bg-blue-500 text-white p-2 rounded-md mr-2"
+            className="w-1/2 bg-green-500 text-white p-2 rounded-md mr-2"
             onClick={handleSaveRecipe}
             disabled={loading}
           >
             {loading ? "Guardando..." : "Guardar Receta"}
           </button>
-          <button
-            className="w-1/2 bg-red-500 text-white p-2 rounded-md ml-2"
-            onClick={() => navigate("/dashboard")}
-          >
-            Regresar al Dashboard
-          </button>
+         
         </div>
 
         {snackbarOpen && (
