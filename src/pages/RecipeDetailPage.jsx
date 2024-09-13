@@ -1,20 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';  // Tu archivo de configuración Firebase
-import {
-  Button,
-  IconButton,
-  Modal,
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  TextField,
-  Pagination,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
+import { db } from '../firebaseConfig'; // Tu archivo de configuración Firebase
 import { useNavigate } from 'react-router-dom';
 
 const RecipeDetailPage = () => {
@@ -96,24 +82,26 @@ const RecipeDetailPage = () => {
   const currentRecipes = filteredRecipes.slice(indexOfFirstRecipe, indexOfLastRecipe);
 
   // Cambiar de página
-  const handlePageChange = (event, value) => {
+  const handlePageChange = (value) => {
     setCurrentPage(value);
   };
 
   return (
-    <div>
-      <h1>Recetas Disponibles</h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-4">Recetas Disponibles</h1>
 
-      <Button variant="contained" color="primary" onClick={goToDashboard}>
+      <button
+        className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
+        onClick={goToDashboard}
+      >
         Regresar al Dashboard
-      </Button>
+      </button>
 
       {/* Barra de búsqueda */}
-      <TextField
-        label="Buscar Recetas"
-        variant="outlined"
-        fullWidth
-        margin="normal"
+      <input
+        type="text"
+        placeholder="Buscar Recetas"
+        className="w-full mb-4 p-2 border border-gray-300 rounded"
         value={searchQuery}
         onChange={handleSearch}
       />
@@ -122,42 +110,74 @@ const RecipeDetailPage = () => {
         <p>No hay recetas disponibles.</p>
       ) : (
         <>
-          <List>
+          <ul className="divide-y divide-gray-200">
             {currentRecipes.map((recipe) => (
-              <ListItem key={recipe.id}>
-                <ListItemText
-                  primary={recipe.recipe_name}
-                  secondary={<div style={{ whiteSpace: 'pre-line', textAlign: 'left' }}>{`Costo: $${recipe.cost_recipe}`}</div>}
-                />
-                <IconButton onClick={() => navigate(`/edit-recipe/${recipe.id}`)} color="primary">
-                  <EditIcon />
-                </IconButton>
-                <IconButton onClick={() => confirmDelete(recipe.id)} color="secondary">
-                  <DeleteIcon />
-                </IconButton>
-              </ListItem>
+              <li key={recipe.id} className="py-4 flex justify-between items-center">
+                <div>
+                  <p className="font-bold">{recipe.recipe_name}</p>
+                  <p className="text-gray-500">Costo: ${recipe.cost_recipe}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => navigate(`/edit-recipe/${recipe.id}`)}
+                    className="text-blue-500 hover:text-blue-700"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => confirmDelete(recipe.id)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </li>
             ))}
-          </List>
+          </ul>
 
           {/* Paginación */}
-          <Pagination
-            count={Math.ceil(filteredRecipes.length / recipesPerPage)}
-            page={currentPage}
-            onChange={handlePageChange}
-            color="primary"
-            sx={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}
-          />
+          <div className="flex justify-center mt-4">
+            <button
+              className="px-4 py-2 mx-1 bg-gray-300 rounded"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </button>
+            <span className="px-4 py-2">{currentPage}</span>
+            <button
+              className="px-4 py-2 mx-1 bg-gray-300 rounded"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={indexOfLastRecipe >= filteredRecipes.length}
+            >
+              Siguiente
+            </button>
+          </div>
         </>
       )}
 
       {/* Modal para confirmar la eliminación de la receta */}
-      <Modal open={openModal} onClose={closeModal}>
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24, p: 4 }}>
-          <Typography variant="h6">¿Estás seguro de que quieres eliminar esta receta?</Typography>
-          <Button onClick={handleDelete} variant="contained" color="secondary">Eliminar</Button>
-          <Button onClick={closeModal} variant="outlined" color="primary">Cancelar</Button>
-        </Box>
-      </Modal>
+      {openModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-md">
+            <h2 className="text-lg font-bold mb-4">¿Estás seguro de que quieres eliminar esta receta?</h2>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded"
+                onClick={handleDelete}
+              >
+                Eliminar
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-300 rounded"
+                onClick={closeModal}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

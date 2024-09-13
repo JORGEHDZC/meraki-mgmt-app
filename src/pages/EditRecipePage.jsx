@@ -9,18 +9,7 @@ import {
   query,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import {
-  TextField,
-  Button,
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Container,
-  Autocomplete,
-} from "@mui/material";
+import { Autocomplete } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 
 const EditRecipePage = () => {
@@ -36,6 +25,7 @@ const EditRecipePage = () => {
   const [ingredientInput, setIngredientInput] = useState(null); // Ingrediente seleccionado para agregar
   const [quantityUsed, setQuantityUsed] = useState(""); // Cantidad usada del nuevo ingrediente
   const [loading, setLoading] = useState(true); // Estado para controlar el cargando
+  const [filteredOptions, setFilteredOptions] = useState([]);
 
   // Función para obtener la receta desde Firestore
   const fetchRecipe = async () => {
@@ -97,6 +87,19 @@ const EditRecipePage = () => {
     fetchRecipe();
     fetchIngredients();
   }, [id]);
+
+  // Filter ingredients based on input
+  useEffect(() => {
+    if (ingredientInput) {
+      const filtered = ingredientOptions.filter((ingredient) =>
+        ingredient.name.toLowerCase().includes(ingredientInput.toLowerCase())
+      );
+      setFilteredOptions(filtered);
+    } else {
+      setFilteredOptions([]); // Clear the options when there is no input
+    }
+  }, [ingredientInput, ingredientOptions]);
+
 
   // Función para manejar el cambio en los campos de texto
   const handleInputChange = (e) => {
@@ -166,36 +169,36 @@ const EditRecipePage = () => {
     }));
   };
 
-  // Función para agregar un nuevo ingrediente a la receta
-  const handleAddIngredient = async () => {
-    if (ingredientInput && quantityUsed) {
-      const ingredientData = await getDoc(
-        doc(db, "ingredients", ingredientInput.id)
-      );
-      const ingredientInfo = ingredientData.data();
-      const cost =
-        (ingredientInfo.cost / ingredientInfo.quantity) * quantityUsed;
-      const newIngredient = {
-        ingredient_id: ingredientInput.id,
-        name: ingredientInfo.name,
-        quantity_used: parseInt(quantityUsed, 10),
-        cost_by_quantity_used: cost.toFixed(2),
-        unit: ingredientInfo.unit,
-      };
-
-      const updatedIngredients = [...recipe.ingredients_list, newIngredient];
-
-      // Actualizar la lista de ingredientes y el costo total de la receta
-      setRecipe((prevRecipe) => ({
-        ...prevRecipe,
-        ingredients_list: updatedIngredients,
-        cost_recipe: calculateTotalCost(updatedIngredients), // Recalcular el costo total
-      }));
-
-      setIngredientInput(null);
-      setQuantityUsed("");
-    }
-  };
+ // Add ingredient to the list
+ const handleAddIngredient = () => {
+  const ingredient = ingredientOptions.find(
+    (ing) => ing.name === ingredientInput
+  );
+  if (ingredient && quantityUsed) {
+    const cost = (ingredient.cost / ingredient.quantity) * quantityUsed;
+    setRecipe((prevRecipe) => ({
+      ...prevRecipe,
+      ingredients_list: [
+        ...prevRecipe.ingredients_list,
+        {
+          ingredient_id: ingredient.id,
+          name: ingredient.name,
+          quantity_used: parseInt(quantityUsed, 10),
+          cost_by_quantity_used: cost.toFixed(2),
+          unit: ingredient.unit,
+        },
+      ],
+      cost_recipe: (
+        parseFloat(prevRecipe.cost_recipe) + parseFloat(cost)
+      ).toFixed(2),
+    }));
+    setIngredientInput(""); // Clear input after adding ingredient
+    setFilteredOptions([]); // Hide dropdown after adding ingredient
+    setQuantityUsed(""); // Clear quantity input
+  } else {
+    alert("Please select an ingredient and enter a valid quantity.");
+  }
+};
 
   // Función para regresar al listado de recetas sin hacer cambios
   const goBack = () => {
@@ -203,133 +206,130 @@ const EditRecipePage = () => {
   };
 
   if (loading) {
-    return <p>Cargando receta...</p>;
+    return <p className="text-center text-lg">Cargando receta...</p>;
   }
 
   return (
-    <Container
-      sx={{ height: "100vh", overflow: "auto", paddingBottom: "2rem" }}
-    >
-      <Box sx={{ maxWidth: 500, margin: "0 auto", padding: "20px" }}>
-        <Typography variant="h4" gutterBottom>
-          Editar Receta
-        </Typography>
+    <div className="container mx-auto py-4">
+      <div className="max-w-lg mx-auto bg-white p-6 shadow-md rounded-md">
+        <h1 className="text-3xl font-semibold mb-4">Editar Receta</h1>
 
-        <TextField
-          label="Nombre de la receta"
+        <input
+          type="text"
           name="recipe_name"
           value={recipe.recipe_name}
           onChange={handleInputChange}
-          fullWidth
-          margin="normal"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
+          placeholder="Nombre de la receta"
         />
 
-        <TextField
-          label="Costo de la receta"
-          name="cost_recipe"
+        <input
           type="number"
+          name="cost_recipe"
           value={recipe.cost_recipe}
           onChange={handleInputChange}
-          fullWidth
-          margin="normal"
-          disabled // El costo total es calculado automáticamente
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
+          disabled
+          placeholder="Costo de la receta"
         />
 
-        <TextField
-          label="Porciones"
-          name="quantity_portions"
+        <input
           type="number"
+          name="quantity_portions"
           value={recipe.quantity_portions}
           onChange={handleInputChange}
-          fullWidth
-          margin="normal"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
+          placeholder="Porciones"
         />
 
-        {/* Renderizar ingredientes */}
+        <h2 className="text-xl font-medium mb-2">Ingredientes</h2>
 
-        <Typography variant="h6">Ingredientes</Typography>
-
-        <List>
+        <ul className="mb-4">
           {recipe.ingredients_list.map((ingredient) => (
-            <ListItem key={ingredient.ingredient_id}>
-              <ListItemText
-                primary={`${ingredient.name}`}
-                secondary={
-                  <div
-                    style={{ whiteSpace: "pre-line", textAlign: "left" }}
-                  >{`Costo: $${ingredient.cost_by_quantity_used}`}</div>
-                }
-              />
-              <TextField
-                label="Cantidad Usada"
+            <li key={ingredient.ingredient_id} className="flex items-center mb-2">
+              <div className="flex-1">
+                <p className="font-semibold">{ingredient.name}</p>
+                <p className="text-sm text-gray-600">{`Costo: $${ingredient.cost_by_quantity_used}`}</p>
+              </div>
+              <input
                 type="number"
                 value={ingredient.quantity_used}
                 onChange={(e) =>
                   handleEditQuantity(ingredient.ingredient_id, e.target.value)
                 }
-                sx={{ marginRight: "1rem" }}
+                className="w-20 mr-4 p-2 border border-gray-300 rounded-md"
               />
-              <IconButton
+              <button
                 onClick={() => handleDeleteIngredient(ingredient.ingredient_id)}
+                className="text-red-500 hover:text-red-700"
               >
                 <Delete />
-              </IconButton>
-            </ListItem>
+              </button>
+            </li>
           ))}
-        </List>
+        </ul>
 
-        {/* Agregar nuevo ingrediente */}
-        <Autocomplete
-          value={ingredientInput}
-          onChange={(event, newValue) => setIngredientInput(newValue)}
-          options={ingredientOptions.filter(
-            (option) =>
-              !recipe.ingredients_list.some(
-                (ing) => ing.ingredient_id === option.id
-              )
+        {/* Ingredient Search Input */}
+        <div className="relative w-full mb-4">
+          <input
+            type="text"
+            placeholder="Buscar Ingrediente"
+            className="w-full p-2 border border-gray-300 rounded-md"
+            value={ingredientInput}
+            onChange={(e) => setIngredientInput(e.target.value)}
+          />
+
+          {/* Show filtered options */}
+          {ingredientInput && filteredOptions.length > 0 && (
+            <ul className="absolute bg-white border border-gray-300 rounded-md mt-1 w-full z-10">
+              {filteredOptions.map((option) => (
+                <li
+                  key={option.id}
+                  className="p-2 hover:bg-blue-100 cursor-pointer"
+                  onClick={() => {
+                    setIngredientInput(option.name);
+                    setFilteredOptions([]);
+                  }}
+                >
+                  {option.name}
+                </li>
+              ))}
+            </ul>
           )}
-          getOptionLabel={(option) => option.name}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Buscar Ingrediente"
-              fullWidth
-              margin="normal"
-            />
-          )}
-        />
-        <TextField
-          label="Cantidad Usada"
+        </div>
+
+
+        <input
           type="number"
           value={quantityUsed}
           onChange={(e) => setQuantityUsed(e.target.value)}
-          fullWidth
-          margin="normal"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
+          placeholder="Cantidad Usada"
         />
-        <Button
-          variant="contained"
-          color="primary"
+
+        <button
           onClick={handleAddIngredient}
+          className="w-full mb-4 bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
         >
           Añadir Ingrediente
-        </Button>
+        </button>
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: "20px",
-          }}
-        >
-          <Button variant="contained" color="primary" onClick={handleUpdate}>
+        <div className="flex justify-between">
+          <button
+            onClick={handleUpdate}
+            className="w-1/2 mr-2 bg-green-500 text-white p-2 rounded-md hover:bg-green-600"
+          >
             Actualizar Receta
-          </Button>
-          <Button variant="outlined" color="secondary" onClick={goBack}>
+          </button>
+          <button
+            onClick={goBack}
+            className="w-1/2 ml-2 bg-gray-500 text-white p-2 rounded-md hover:bg-gray-600"
+          >
             Cancelar
-          </Button>
-        </Box>
-      </Box>
-    </Container>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
