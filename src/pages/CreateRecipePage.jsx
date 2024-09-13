@@ -3,7 +3,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { db, storage } from "../firebaseConfig"; // Ensure your Firebase config is correctly imported
 import { collection, addDoc, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import Firebase storage methods
 import { useNavigate } from "react-router-dom"; // Hook for navigation
 
 const CreateRecipePage = () => {
@@ -17,8 +17,8 @@ const CreateRecipePage = () => {
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState(null); // State for image file
+  const [imageUrl, setImageUrl] = useState(""); // State for image URL after upload
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -76,17 +76,31 @@ const CreateRecipePage = () => {
       .toFixed(2);
   };
 
+  // Handle image selection
   const handleImageChange = (e) => {
     if (e.target.files[0]) {
       setImageFile(e.target.files[0]);
     }
   };
 
+  // Upload the image to Firebase Storage
+  const uploadImageToStorage = async () => {
+    if (imageFile) {
+      const storageRef = ref(storage, `recipes/${imageFile.name}`);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return downloadURL; // Return the download URL after upload
+    }
+    return null; // Return null if no image was uploaded
+  };
+
   const handleSaveRecipe = async () => {
     setLoading(true);
-    let imageUrl = "";
+    let uploadedImageUrl = "";
+
+    // Upload the image and get the URL
     if (imageFile) {
-      imageUrl = await uploadImageToStorage();
+      uploadedImageUrl = await uploadImageToStorage();
     }
 
     if (
@@ -105,20 +119,21 @@ const CreateRecipePage = () => {
         quantity_portions: parseInt(quantityPortions, 10),
         cost_recipe: calculateTotalCost(),
         create_date: createDate,
-        image_url: imageUrl,
+        image_url: uploadedImageUrl, // Save the image URL if available
       };
 
       try {
-        await addDoc(collection(db, "recepies"), recipeData);
+        await addDoc(collection(db, "recepies"), recipeData); // Save recipe in Firestore
         setSnackbarMessage("Receta guardada exitosamente");
         setSnackbarOpen(true);
 
+        // Reset form fields after saving
         setRecipeName("");
         setQuantityPortions("");
         setIngredientsList([]);
         setCreateDate(new Date());
         setImageFile(null);
-        setImageUrl("");
+        setImageUrl(uploadedImageUrl || ""); // Show image preview after upload
       } catch (error) {
         console.error("Error al guardar la receta:", error);
         setSnackbarMessage("Error al guardar la receta");
@@ -197,11 +212,13 @@ const CreateRecipePage = () => {
           Añadir Ingrediente
         </button>
 
+        {/* Image upload section */}
         <div className="mb-4">
           <h2 className="text-lg font-bold">Subir Imagen de la Receta</h2>
           <input type="file" onChange={handleImageChange} />
         </div>
 
+        {/* Image preview section */}
         {imageUrl && (
           <div className="mb-4">
             <h2 className="text-lg font-bold">Vista Previa de la Imagen:</h2>
