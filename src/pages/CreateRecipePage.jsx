@@ -1,47 +1,27 @@
 import React, { useState, useEffect } from "react";
-import {
-  Container,
-  TextField,
-  Button,
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  InputAdornment,
-  IconButton,
-  Snackbar,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Autocomplete,
-} from "@mui/material";
-import { Delete } from "@mui/icons-material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { db, storage } from "../firebaseConfig"; // Asegúrate de importar tu configuración de Firebase y Storage
+import { db, storage } from "../firebaseConfig"; // Ensure your Firebase config is correctly imported
 import { collection, addDoc, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Importar funciones de Storage para cargar imagenes
-import { useNavigate } from "react-router-dom"; // Importa el hook para la navegación
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigate } from "react-router-dom"; // Hook for navigation
 
 const CreateRecipePage = () => {
   const [recipeName, setRecipeName] = useState("");
   const [quantityPortions, setQuantityPortions] = useState("");
   const [ingredientsList, setIngredientsList] = useState([]);
-  const [ingredientInput, setIngredientInput] = useState(null);
+  const [ingredientInput, setIngredientInput] = useState("");
   const [quantityUsed, setQuantityUsed] = useState("");
   const [createDate, setCreateDate] = useState(new Date());
   const [ingredientOptions, setIngredientOptions] = useState([]);
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [imageFile, setImageFile] = useState(null); // Estado para la imagen
-  const [imageUrl, setImageUrl] = useState(""); // URL de la imagen cargada
-  const [loading, setLoading] = useState(false); // Para controlar el estado de carga de la imagen
+  const [imageFile, setImageFile] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate(); // Instancia del hook para la navegación
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchIngredients = async () => {
@@ -52,64 +32,41 @@ const CreateRecipePage = () => {
         ...doc.data(),
       }));
       setIngredientOptions(ingredients);
-      setFilteredOptions(ingredients);
     };
 
     fetchIngredients();
   }, []);
 
+  // Filter ingredients as the user types in the input
   useEffect(() => {
-    // Filtrar las opciones de ingredientes para excluir los ingredientes ya añadidos
-    const filtered = ingredientOptions.filter(
-      (ingredient) =>
-        !ingredientsList.some(
-          (addedIngredient) => addedIngredient.id === ingredient.id
-        )
+    const filtered = ingredientOptions.filter((ingredient) =>
+      ingredient.name.toLowerCase().includes(ingredientInput.toLowerCase())
     );
     setFilteredOptions(filtered);
-  }, [ingredientsList, ingredientOptions]);
-
-  // Función para manejar la selección de imagen
-  const handleImageChange = (e) => {
-    if (e.target.files[0]) {
-      setImageFile(e.target.files[0]);
-    }
-  };
-
-  // Función para subir la imagen a Firebase Storage
-  const uploadImageToStorage = async () => {
-    if (imageFile) {
-      const storageRef = ref(storage, `recipes/${imageFile.name}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
-    }
-    return null;
-  };
+  }, [ingredientInput, ingredientOptions]);
 
   const handleAddIngredient = () => {
-    if (ingredientInput) {
-      const ingredient = ingredientOptions.find(
-        (ing) => ing.id === ingredientInput.id
-      );
-      if (ingredient) {
-        const cost = (ingredient.cost / ingredient.quantity) * quantityUsed;
-        setIngredientsList((prevList) => [
-          ...prevList,
-          {
-            id: ingredient.id,
-            name: ingredient.name,
-            quantityUsed: parseInt(quantityUsed, 10),
-            costByQuantityUsed: cost.toFixed(2),
-            unit: ingredient.unit,
-          },
-        ]);
-        setIngredientInput(null);
-        setQuantityUsed("");
-      } else {
-        setSnackbarMessage("Ingrediente no encontrado");
-        setSnackbarOpen(true);
-      }
+    const ingredient = ingredientOptions.find(
+      (ing) => ing.name === ingredientInput
+    );
+    if (ingredient && quantityUsed) {
+      const cost = (ingredient.cost / ingredient.quantity) * quantityUsed;
+      setIngredientsList((prevList) => [
+        ...prevList,
+        {
+          id: ingredient.id,
+          name: ingredient.name,
+          quantityUsed: parseInt(quantityUsed, 10),
+          costByQuantityUsed: cost.toFixed(2),
+          unit: ingredient.unit,
+        },
+      ]);
+      setIngredientInput(""); // Clear input after adding ingredient
+      setFilteredOptions([]); // Hide dropdown after adding ingredient
+      setQuantityUsed(""); // Clear quantity input
+    } else {
+      setSnackbarMessage("Ingrediente no encontrado o sin cantidad usada");
+      setSnackbarOpen(true);
     }
   };
 
@@ -119,11 +76,17 @@ const CreateRecipePage = () => {
       .toFixed(2);
   };
 
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
   const handleSaveRecipe = async () => {
-    setLoading(true); // Iniciar la carga
+    setLoading(true);
     let imageUrl = "";
     if (imageFile) {
-      imageUrl = await uploadImageToStorage(); // Subir imagen a Firebase Storage
+      imageUrl = await uploadImageToStorage();
     }
 
     if (
@@ -142,18 +105,14 @@ const CreateRecipePage = () => {
         quantity_portions: parseInt(quantityPortions, 10),
         cost_recipe: calculateTotalCost(),
         create_date: createDate,
-        image_url: imageUrl, // Agregar la URL de la imagen
+        image_url: imageUrl,
       };
 
-      // Imprimir en consola para verificar los datos antes de guardarlos
-      console.log("Datos de la receta:", recipeData);
-
       try {
-        await addDoc(collection(db, "recepies"), recipeData); // Guardar la receta en Firestore
+        await addDoc(collection(db, "recepies"), recipeData);
         setSnackbarMessage("Receta guardada exitosamente");
         setSnackbarOpen(true);
 
-        // Resetear campos después de guardar
         setRecipeName("");
         setQuantityPortions("");
         setIngredientsList([]);
@@ -170,144 +129,124 @@ const CreateRecipePage = () => {
       setSnackbarOpen(true);
     }
 
-    setLoading(false); // Terminar la carga
+    setLoading(false);
   };
 
   return (
-    <Container
-      sx={{ height: "100vh", display: "flex", flexDirection: "column" }}
-    >
-      <Box sx={{ flexGrow: 1, overflowY: "auto", paddingRight: "1rem" }}>
-        <Typography variant="h4" gutterBottom>
-          Crear Nueva Receta
-        </Typography>
+    <div className="container mx-auto p-4">
+      <div className="flex flex-col h-screen overflow-y-auto">
+        <h1 className="text-4xl font-bold mb-4">Crear Nueva Receta</h1>
 
-        <TextField
-          label="Nombre de la Receta"
-          variant="outlined"
-          fullWidth
+        <input
+          type="text"
+          placeholder="Nombre de la Receta"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={recipeName}
           onChange={(e) => setRecipeName(e.target.value)}
-          sx={{ marginBottom: "1rem" }}
         />
 
-        <TextField
-          label="Número de Porciones"
-          variant="outlined"
+        <input
           type="number"
-          fullWidth
+          placeholder="Número de Porciones"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={quantityPortions}
           onChange={(e) => setQuantityPortions(e.target.value)}
-          sx={{ marginBottom: "1rem" }}
         />
 
-        <Autocomplete
-          value={ingredientInput}
-          onChange={(event, newValue) => setIngredientInput(newValue)}
-          options={filteredOptions}
-          getOptionLabel={(option) => option.name}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Buscar Ingrediente"
-              variant="outlined"
-              sx={{ marginBottom: "1rem" }}
-            />
+        {/* Ingredient Search Input */}
+        <div className="relative w-full mb-4">
+          <input
+            type="text"
+            placeholder="Buscar Ingrediente"
+            className="w-full p-2 border border-gray-300 rounded-md"
+            value={ingredientInput}
+            onChange={(e) => setIngredientInput(e.target.value)}
+          />
+          
+          {/* Show the filtered options only when the user has typed something */}
+          {ingredientInput && filteredOptions.length > 0 && (
+            <ul className="absolute bg-white border border-gray-300 rounded-md mt-1 w-full z-10">
+              {filteredOptions.map((option) => (
+                <li
+                  key={option.id}
+                  className="p-2 hover:bg-blue-100 cursor-pointer"
+                  onClick={() => {
+                    setIngredientInput(option.name);
+                    setFilteredOptions([]); // Hide the dropdown after selection
+                  }}
+                >
+                  {option.name}
+                </li>
+              ))}
+            </ul>
           )}
-        />
+        </div>
 
-        <TextField
-          label="Cantidad Usada"
-          variant="outlined"
+        <input
           type="number"
-          fullWidth
+          placeholder="Cantidad Usada"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           value={quantityUsed}
           onChange={(e) => setQuantityUsed(e.target.value)}
-          sx={{ marginBottom: "1rem" }}
-          InputProps={{
-            endAdornment: <InputAdornment position="end">Unidad</InputAdornment>,
-          }}
         />
 
-        <Button
-          variant="contained"
-          color="primary"
+        <button
+          className="w-full mb-4 bg-blue-500 text-white p-2 rounded-md"
           onClick={handleAddIngredient}
-          sx={{ marginBottom: "1rem" }}
         >
           Añadir Ingrediente
-        </Button>
+        </button>
 
-        {/* Botón para subir una imagen */}
-        <Typography variant="h6">Subir Imagen de la Receta</Typography>
-        <Button
-          variant="contained"
-          component="label"
-          sx={{ marginBottom: "1rem" }}
-        >
-          Seleccionar Imagen
-          <input type="file" hidden onChange={handleImageChange} />
-        </Button>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold">Subir Imagen de la Receta</h2>
+          <input type="file" onChange={handleImageChange} />
+        </div>
 
-        {/* Renderizar imagen si existe */}
         {imageUrl && (
-          <Box sx={{ marginBottom: "1rem" }}>
-            <Typography variant="h6">Vista Previa de la Imagen:</Typography>
-            <img src={imageUrl} alt="Receta" width="100%" />
-          </Box>
+          <div className="mb-4">
+            <h2 className="text-lg font-bold">Vista Previa de la Imagen:</h2>
+            <img src={imageUrl} alt="Receta" className="w-full" />
+          </div>
         )}
 
-        <TextField
-          label="Costo Total de la Receta"
-          variant="outlined"
-          value={`$${calculateTotalCost()}`}
-          InputProps={{
-            readOnly: true,
-          }}
-          sx={{ marginBottom: "1rem" }}
+        <input
+          type="text"
+          placeholder={`Costo Total de la Receta: $${calculateTotalCost()}`}
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
+          readOnly
         />
 
         <DatePicker
           selected={createDate}
           onChange={(date) => setCreateDate(date)}
           dateFormat="MMMM d, yyyy"
-          className="react-datepicker"
+          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
           placeholderText="Seleccionar fecha de creación"
-          style={{ marginBottom: "1rem", width: "100%", padding: "0.5rem" }}
         />
-      </Box>
 
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "1rem",
-        }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSaveRecipe}
-          disabled={loading} // Deshabilitar botón durante la carga
-        >
-          {loading ? "Guardando..." : "Guardar Receta"}
-        </Button>
+        <div className="flex justify-between">
+          <button
+            className="w-1/2 bg-blue-500 text-white p-2 rounded-md mr-2"
+            onClick={handleSaveRecipe}
+            disabled={loading}
+          >
+            {loading ? "Guardando..." : "Guardar Receta"}
+          </button>
+          <button
+            className="w-1/2 bg-red-500 text-white p-2 rounded-md ml-2"
+            onClick={() => navigate("/dashboard")}
+          >
+            Regresar al Dashboard
+          </button>
+        </div>
 
-        <Button variant="contained" color="error" onClick={() => navigate("/dashboard")}>
-          Regresar al Dashboard
-        </Button>
-      </Box>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert onClose={() => setSnackbarOpen(false)} severity="success">
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Container>
+        {snackbarOpen && (
+          <div className="fixed bottom-4 left-4 bg-green-500 text-white p-4 rounded-md">
+            {snackbarMessage}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
