@@ -1,55 +1,78 @@
-// src/services/authService.jsx
+// src/services/authService.js
 
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword  } from 'firebase/auth';
-import { auth } from '../firebaseConfig';
+import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from 'firebase/firestore';
 
-// Servicio para iniciar sesión
+// Función para registrar al usuario en la colección de "pendingUsers"
+export const registerService = async (email, password) => {
+  const db = getFirestore();
+  try {
+    // Almacena los datos en una colección "pendingUsers" en Firestore para aprobación
+    await addDoc(collection(db, 'pendingUsers'), {
+      email,
+      password, // Considera encriptar el password en un proyecto real
+      approved: false,
+      requestedAt: new Date(),
+    });
+    return true;
+  } catch (error) {
+    console.error('Error al registrar el usuario para aprobación:', error);
+    return false;
+  }
+};
+
+// Función para iniciar sesión con Firebase Authentication
 export const loginService = async (email, password) => {
+  const auth = getAuth();
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    // El usuario está autenticado, el token está disponible en userCredential
     const token = await userCredential.user.getIdToken();
-    
-    // Almacenar el token en localStorage o manejarlo de otra forma
-    localStorage.setItem('authToken', token);
-
     return { token };
   } catch (error) {
-    console.error('Error en la autenticación:', error.message);
-    return null;
+    throw error; // Si hay un error, lanzamos el error para manejarlo en el contexto
   }
 };
 
-// Servicio para registrar un nuevo usuario
-export const registerService = async (email, password) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // El usuario ha sido creado exitosamente
-      const token = await userCredential.user.getIdToken();
-  
-      // Almacenar el token en localStorage o manejarlo como desees
-      localStorage.setItem('authToken', token);
-  
-      return { token };
-    } catch (error) {
-      console.error('Error al registrar el usuario:', error.message);
-      return null;
-    }
-  };
-
-// Servicio para cerrar sesión
+// Función para cerrar sesión con Firebase Authentication
 export const logoutService = async () => {
+  const auth = getAuth();
   try {
     await signOut(auth);
-    // Eliminar el token almacenado
-    localStorage.removeItem('authToken');
   } catch (error) {
-    console.error('Error al cerrar sesión:', error.message);
+    console.error("Error al cerrar sesión:", error);
   }
 };
 
-// Servicio para obtener el token almacenado
-export const getAuthToken = () => {
-  // Recuperar el token desde localStorage
-  return localStorage.getItem('authToken');
+// Función para obtener todos los usuarios pendientes de aprobación
+export const getPendingUsers = async () => {
+  const db = getFirestore();
+  try {
+    const querySnapshot = await getDocs(collection(db, 'pendingUsers'));
+    const pendingUsers = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    return pendingUsers;
+  } catch (error) {
+    console.error('Error al obtener usuarios pendientes:', error);
+    return [];
+  }
+};
+
+// Función para aprobar un usuario pendiente
+export const approveUserService = async (user) => {
+  const db = getFirestore();
+  try {
+    // Almacena los datos en una colección "approvedUsers" en Firestore 
+    await addDoc(collection(db, 'approvedUsers'), {
+      email,
+      password, // Considera encriptar el password en un proyecto real
+      approved: true,
+      requestedAt: new Date(),
+    });
+    return true;
+  } catch (error) {
+    console.error('Error  el usuario para aprobación:', error);
+    return false;
+  }
 };

@@ -4,6 +4,7 @@ import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
+import AdminApproveUsers from "./pages/AdminApproveUsers"
 import DashboardPage from "./pages/DashboardPage";
 import CreateRecipePage from "./pages/CreateRecipePage";
 import InventoryPage from "./pages/InventoryPage";
@@ -22,6 +23,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/approve-users" element={<AdminApproveUsers/>}/>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/create-recipe" element={<CreateRecipePage />} />
             <Route path="/recipe-detail" element={<RecipeDetailPage />} />

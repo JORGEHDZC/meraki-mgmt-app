@@ -3,7 +3,7 @@ import React, { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
-import { BookOpen, ClipboardList, PlusCircle, LogOut } from "lucide-react";
+import { BookOpen, ClipboardList, PlusCircle, LogOut, UserCheck  } from "lucide-react";
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
@@ -47,6 +47,14 @@ export default function Dashboard() {
             <BookOpen className="h-8 w-8 mb-2" />
             Ver Recetas
           </Button>
+          <Button
+            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
+            onClick={() => navigate("/approve-users")}
+          >
+            <UserCheck  className="h-8 w-8 mb-2" />
+            Aceptar Usuarios
+          </Button>
+          
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button

@@ -1,14 +1,15 @@
-// src/pages/RegisterPage.jsx
-
 import React, { useState } from 'react';
 import { registerService } from '../services/authService';
-import { useNavigate } from 'react-router-dom'; // To navigate back
+import { useNavigate } from 'react-router-dom';
+import { Snackbar, Alert } from '@mui/material'; // Importamos Snackbar y Alert de Material UI
 
-const Register = () => {
+const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate(); // Use navigate for redirection
+  const [success, setSuccess] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // Estado para controlar el Snackbar
+  const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -16,15 +17,26 @@ const Register = () => {
     const result = await registerService(email, password);
 
     if (result) {
-      console.log('Usuario registrado con éxito');
-      // Redirige o realiza alguna acción
+      setSuccess('Solicitud de registro enviada para aprobación.');
+      setError('');
+      setSnackbarOpen(true); // Abrimos el Snackbar
+
+      // Cerramos el Snackbar después de 1500ms y navegamos de vuelta a la página de inicio de sesión
+      setTimeout(() => {
+        setSnackbarOpen(false);
+        navigate("/");
+      }, 1500);
     } else {
       setError('Error al registrar el usuario');
     }
   };
 
   const handleCancel = () => {
-    navigate("/"); // Navigate back to the home page
+    navigate("/");
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -66,12 +78,21 @@ const Register = () => {
             </button>
           </div>
         </form>
-        {error && (
-          <p className="mt-4 text-red-600 text-sm text-center">{error}</p>
-        )}
+        {error && <p className="mt-4 text-red-600 text-sm text-center">{error}</p>}
+        
+        {/* Snackbar para mostrar mensajes de éxito */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={1500}
+          onClose={handleCloseSnackbar}
+        >
+          <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+            {success}
+          </Alert>
+        </Snackbar>
       </div>
     </div>
   );
 };
 
-export default Register;
+export default RegisterPage;
