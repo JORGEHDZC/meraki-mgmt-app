@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom'; // Importar useNavigate
 import { approveUserService } from './../services/authService';
@@ -18,7 +18,7 @@ const AdminApproveUsers = () => {
             const user = auth.currentUser;
 
             if (user) {
-                console.log("UID del usuario autenticado:", user.uid); // Agregar este console.log para verificar el UID
+                console.log("UID del usuario autenticado:", user.uid);
 
                 try {
                     const db = getFirestore();
@@ -71,24 +71,21 @@ const AdminApproveUsers = () => {
         const db = getFirestore();
 
         try {
-            // Eliminar el usuario de la colección 'pendingUsers'
             await deleteDoc(doc(db, 'pendingUsers', user.id));
-
-            // Actualizar la lista de usuarios pendientes
             setPendingUsers(pendingUsers.filter(u => u.id !== user.id));
-
             console.log(`Usuario con email ${user.email} ha sido denegado y eliminado de pendingUsers.`);
         } catch (error) {
             console.error("Error al denegar el acceso al usuario:", error);
         }
     };
 
-
     const handleApprove = async (user) => {
-        
-
         try {
             const result = await approveUserService(user);
+            if (result) {
+                setPendingUsers(pendingUsers.filter(u => u.id !== user.id));
+                console.log(`Usuario con email ${user.email} ha sido aprobado y movido a approvedUsers.`);
+            }
         } catch (error) {
             console.error("Error al aprobar el usuario:", error);
         }
@@ -140,7 +137,6 @@ const AdminApproveUsers = () => {
                         </li>
                     ))}
 
-                    {/* Botón de regresar al Dashboard */}
                     <button
                         onClick={() => navigate('/dashboard')}
                         className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 mt-6"
