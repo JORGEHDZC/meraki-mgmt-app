@@ -5,8 +5,6 @@ import { LockIcon } from 'lucide-react'
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
-// Assuming you have an AuthContext
 import { AuthContext } from "@/context/AuthContext"
 
 export default function LoginForm() {
@@ -26,11 +24,15 @@ export default function LoginForm() {
     }
 
     try {
-      await login(email, password)
-      setFormError(null)
-      navigate("/dashboard")
+      const success = await login(email, password)
+      if (success) {
+        setFormError(null)
+        navigate("/dashboard")
+      } else {
+        setFormError("Credenciales incorrectas, por favor verifica.")
+      }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "An error occurred")
+      setFormError(err instanceof Error ? err.message : "Ocurrió un error al iniciar sesión.")
     }
   }
 
