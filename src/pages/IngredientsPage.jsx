@@ -1,7 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebaseConfig";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+} from "firebase/firestore";
 
 const normalizeIngredient = (ingredient) => {
   return ingredient
@@ -11,7 +19,7 @@ const normalizeIngredient = (ingredient) => {
     .trim();
 };
 
-const ManageInventoryPage = () => {
+const IngredientsPage = () => {
   const [ingredients, setIngredients] = useState([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -64,7 +72,11 @@ const ManageInventoryPage = () => {
       return;
     }
 
-    if (!quantity || isNaN(parseInt(quantity, 10)) || parseInt(quantity, 10) <= 0) {
+    if (
+      !quantity ||
+      isNaN(parseInt(quantity, 10)) ||
+      parseInt(quantity, 10) <= 0
+    ) {
       setSnackbarMessage("La cantidad debe ser un número entero positivo");
       setSnackbarOpen(true);
       return;
@@ -86,7 +98,11 @@ const ManageInventoryPage = () => {
         cost,
         unit,
       });
-      await handleUpdateIngredientCostOrQuantity(ingredientToEdit, cost, quantity);
+      await handleUpdateIngredientCostOrQuantity(
+        ingredientToEdit,
+        cost,
+        quantity
+      );
       setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
       setSnackbarOpen(true);
       setTimeout(() => {
@@ -94,7 +110,8 @@ const ManageInventoryPage = () => {
       }, 1500);
     } else {
       const ingredientExists = ingredients.some(
-        (ingredient) => normalizeIngredient(ingredient.name) === normalizedIngredient
+        (ingredient) =>
+          normalizeIngredient(ingredient.name) === normalizedIngredient
       );
 
       if (ingredientExists) {
@@ -142,10 +159,6 @@ const ManageInventoryPage = () => {
     setIngredientToEdit(ingredient.id);
   };
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
     const filteredIngredients = ingredients.filter((ingredient) =>
@@ -159,12 +172,17 @@ const ManageInventoryPage = () => {
   };
 
   const filteredIngredients = ingredients
-    .filter((ingredient) => ingredient.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((ingredient) =>
+      ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const indexOfLastIngredient = currentPage * itemsPerPage;
   const indexOfFirstIngredient = indexOfLastIngredient - itemsPerPage;
-  const currentIngredients = filteredIngredients.slice(indexOfFirstIngredient, indexOfLastIngredient);
+  const currentIngredients = filteredIngredients.slice(
+    indexOfFirstIngredient,
+    indexOfLastIngredient
+  );
 
   const handlePageChange = (direction) => {
     setCurrentPage((prevPage) => {
@@ -188,7 +206,11 @@ const ManageInventoryPage = () => {
   };
 
   // Función para actualizar recetas cuando un ingrediente se modifica
-  const updateRecipesWithModifiedIngredient = async (ingredientId, newCost, newQuantity) => {
+  const updateRecipesWithModifiedIngredient = async (
+    ingredientId,
+    newCost,
+    newQuantity
+  ) => {
     try {
       const q = query(collection(db, "recepies"));
       const querySnapshot = await getDocs(q);
@@ -196,26 +218,33 @@ const ManageInventoryPage = () => {
       for (const recipeDoc of querySnapshot.docs) {
         const recipeData = recipeDoc.data();
 
-        const updatedIngredients = recipeData.ingredients_list.map((ingredient) => {
-          if (ingredient.ingredient_id === ingredientId) {
-            const newCostByQuantityUsed = calculateNewCostByQuantityUsed(
-              newCost,
-              newQuantity,
-              ingredient.quantity_used
-            );
-            return {
-              ...ingredient,
-              cost: newCost,
-              quantity: newQuantity,
-              cost_by_quantity_used: newCostByQuantityUsed,
-            };
+        const updatedIngredients = recipeData.ingredients_list.map(
+          (ingredient) => {
+            if (ingredient.ingredient_id === ingredientId) {
+              const newCostByQuantityUsed = calculateNewCostByQuantityUsed(
+                newCost,
+                newQuantity,
+                ingredient.quantity_used
+              );
+              return {
+                ...ingredient,
+                cost: newCost,
+                quantity: newQuantity,
+                cost_by_quantity_used: newCostByQuantityUsed,
+              };
+            }
+            return ingredient;
           }
-          return ingredient;
-        });
+        );
 
-        const updatedRecipeCost = recalculateRecipeTotalCost(updatedIngredients);
+        const updatedRecipeCost =
+          recalculateRecipeTotalCost(updatedIngredients);
 
-        if (recipeData.ingredients_list.some((ingredient) => ingredient.ingredient_id === ingredientId)) {
+        if (
+          recipeData.ingredients_list.some(
+            (ingredient) => ingredient.ingredient_id === ingredientId
+          )
+        ) {
           await updateDoc(doc(db, "recepies", recipeDoc.id), {
             ingredients_list: updatedIngredients,
             cost_recipe: updatedRecipeCost,
@@ -240,20 +269,28 @@ const ManageInventoryPage = () => {
   };
 
   // Llama a esta función cuando se actualice el costo o la cantidad de un ingrediente
-  const handleUpdateIngredientCostOrQuantity = async (ingredientId, newCost, newQuantity) => {
-    await updateRecipesWithModifiedIngredient(ingredientId, newCost, newQuantity);
+  const handleUpdateIngredientCostOrQuantity = async (
+    ingredientId,
+    newCost,
+    newQuantity
+  ) => {
+    await updateRecipesWithModifiedIngredient(
+      ingredientId,
+      newCost,
+      newQuantity
+    );
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-4xl font-bold mb-4">Gestión de Inventario</h1>
+      <h1 className="text-4xl font-bold mb-4">Lista de Ingredientes</h1>
 
       <div className="mb-4">
         <button
           className="bg-red-500 text-white px-4 py-2 rounded mb-4"
           onClick={() => navigate("/dashboard")}
         >
-          Regresar a Inventario
+          Regresar al Dashboard
         </button>
       </div>
 
@@ -311,9 +348,7 @@ const ManageInventoryPage = () => {
           onChange={handleSearchChange}
         />
 
-        {noResultsMessage && (
-          <p className="text-red-500">{noResultsMessage}</p>
-        )}
+        {noResultsMessage && <p className="text-red-500">{noResultsMessage}</p>}
 
         <ul className="mb-4">
           {currentIngredients.map((ingredient) => (
@@ -325,10 +360,14 @@ const ManageInventoryPage = () => {
                 <span className="font-bold">{ingredient.name}</span>
                 <ul className="text-left space-y-1">
                   <li>
-                    <span className="text-gray-500">Cantidad: {ingredient.quantity} {ingredient.unit} </span>
+                    <span className="text-gray-500">
+                      Cantidad: {ingredient.quantity} {ingredient.unit}{" "}
+                    </span>
                   </li>
                   <li>
-                    <span className="text-gray-500">Costo: ${ingredient.cost} </span>
+                    <span className="text-gray-500">
+                      Costo: ${ingredient.cost}{" "}
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -384,7 +423,9 @@ const ManageInventoryPage = () => {
             >
               &times;
             </button>
-            <h2 className="text-xl font-bold mb-2">Confirmación de Eliminación</h2>
+            <h2 className="text-xl font-bold mb-2">
+              Confirmación de Eliminación
+            </h2>
             <p>¿Está seguro de que desea eliminar este ingrediente?</p>
             <div className="flex justify-end mt-4">
               <button
@@ -407,4 +448,4 @@ const ManageInventoryPage = () => {
   );
 };
 
-export default ManageInventoryPage;
+export default IngredientsPage;

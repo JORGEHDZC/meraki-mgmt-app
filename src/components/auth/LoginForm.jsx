@@ -1,40 +1,44 @@
-'use client'
+"use client";
 
-import { useState, useContext } from 'react'
-import { LockIcon } from 'lucide-react'
+import { useState, useContext } from "react";
+import { LockIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { AuthContext } from "@/context/AuthContext"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function LoginForm() {
-  const { login } = useContext(AuthContext)
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [formError, setFormError] = useState(null)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState(null);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!email || !password) {
-      setFormError("Por favor, completa todos los campos.")
-      return
+      setFormError("Por favor, completa todos los campos.");
+      return;
     }
 
     try {
-      const success = await login(email, password)
+      const success = await login(email, password);
       if (success) {
-        setFormError(null)
-        navigate("/dashboard")
+        setFormError(null);
+        navigate("/dashboard");
       } else {
-        setFormError("Credenciales incorrectas, por favor verifica.")
+        setFormError("Credenciales incorrectas, por favor verifica.");
       }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Ocurrió un error al iniciar sesión.")
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : "Ocurrió un error al iniciar sesión."
+      );
     }
-  }
+  };
 
   return (
     <div className="container mx-auto max-w-md mt-8">
@@ -70,12 +74,16 @@ export default function LoginForm() {
             <Button variant="link" size="sm">
               ¿Olvidaste tu contraseña?
             </Button>
-            <Button variant="link" size="sm" asChild onClick={() => navigate("/register")}>
-             Regístrate aquí
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => navigate("/register")}
+            >
+              Regístrate aquí
             </Button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

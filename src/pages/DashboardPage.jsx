@@ -1,12 +1,25 @@
 import { Button } from "@/components/ui/Button";
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
-import { BookOpen, ClipboardList, PlusCircle, LogOut, UserCheck  } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
+import {
+  BookOpen,
+  ClipboardList,
+  PlusCircle,
+  LogOut,
+  UserCheck,
+} from "lucide-react";
 
 export default function Dashboard() {
-  const { user, logout } = useContext(AuthContext);
+  const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -22,7 +35,8 @@ export default function Dashboard() {
             Bienvenido al Dashboard, Usuario!
           </CardTitle>
           <CardDescription className="text-center text-lg mt-2">
-            Este es tu panel principal donde puedes gestionar tus recetas, ingredientes, y más.
+            Este es tu panel principal donde puedes gestionar tus recetas,
+            ingredientes, y más.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -35,10 +49,10 @@ export default function Dashboard() {
           </Button>
           <Button
             className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
-            onClick={() => navigate("/manage-inventory")}
+            onClick={() => navigate("/ingredients")}
           >
             <ClipboardList className="h-8 w-8 mb-2" />
-            Gestionar Inventario
+            Lista de Ingredientes
           </Button>
           <Button
             className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
@@ -47,14 +61,13 @@ export default function Dashboard() {
             <BookOpen className="h-8 w-8 mb-2" />
             Ver Recetas
           </Button>
-          <Button
+          {/* <Button
             className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
             onClick={() => navigate("/approve-users")}
           >
-            <UserCheck  className="h-8 w-8 mb-2" />
+            <UserCheck className="h-8 w-8 mb-2" />
             Aceptar Usuarios
-          </Button>
-          
+          </Button> */}
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button

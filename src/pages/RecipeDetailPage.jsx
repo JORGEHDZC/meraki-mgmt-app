@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig'; // Tu archivo de configuración Firebase
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { db } from "../firebaseConfig"; // Tu archivo de configuración Firebase
+import { useNavigate } from "react-router-dom";
 
 const RecipeDetailPage = () => {
   const [recipes, setRecipes] = useState([]); // Estado para almacenar todas las recetas
   const [filteredRecipes, setFilteredRecipes] = useState([]); // Estado para recetas filtradas
   const [openModal, setOpenModal] = useState(false); // Estado para controlar el modal
   const [recipeToDelete, setRecipeToDelete] = useState(null); // Estado para la receta a eliminar
-  const [searchQuery, setSearchQuery] = useState(''); // Estado para búsqueda
+  const [searchQuery, setSearchQuery] = useState(""); // Estado para búsqueda
   const [currentPage, setCurrentPage] = useState(1); // Estado para la página actual
   const recipesPerPage = 5; // Cantidad de recetas por página
   const navigate = useNavigate(); // Hook de navegación
@@ -16,7 +16,7 @@ const RecipeDetailPage = () => {
   // Función para obtener todas las recetas de la colección "recepies"
   const fetchRecipes = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'recepies'));
+      const querySnapshot = await getDocs(collection(db, "recepies"));
       const fetchedRecipes = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -24,7 +24,7 @@ const RecipeDetailPage = () => {
       setRecipes(fetchedRecipes);
       setFilteredRecipes(fetchedRecipes);
     } catch (error) {
-      console.error('Error fetching recepies:', error);
+      console.error("Error fetching recepies:", error);
     }
   };
 
@@ -32,13 +32,17 @@ const RecipeDetailPage = () => {
   const handleDelete = async () => {
     if (recipeToDelete) {
       try {
-        await deleteDoc(doc(db, 'recepies', recipeToDelete));
-        setRecipes((prevRecipes) => prevRecipes.filter((recipe) => recipe.id !== recipeToDelete));
-        setFilteredRecipes((prevRecipes) => prevRecipes.filter((recipe) => recipe.id !== recipeToDelete));
+        await deleteDoc(doc(db, "recepies", recipeToDelete));
+        setRecipes((prevRecipes) =>
+          prevRecipes.filter((recipe) => recipe.id !== recipeToDelete)
+        );
+        setFilteredRecipes((prevRecipes) =>
+          prevRecipes.filter((recipe) => recipe.id !== recipeToDelete)
+        );
         setOpenModal(false); // Cerrar el modal después de eliminar
         setRecipeToDelete(null); // Reiniciar el estado de la receta a eliminar
       } catch (error) {
-        console.error('Error deleting recipe:', error);
+        console.error("Error deleting recipe:", error);
       }
     }
   };
@@ -57,7 +61,7 @@ const RecipeDetailPage = () => {
 
   // Función para navegar al dashboard
   const goToDashboard = () => {
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
 
   // Cargar todas las recetas cuando el componente se monte
@@ -79,7 +83,10 @@ const RecipeDetailPage = () => {
   // Paginar las recetas
   const indexOfLastRecipe = currentPage * recipesPerPage;
   const indexOfFirstRecipe = indexOfLastRecipe - recipesPerPage;
-  const currentRecipes = filteredRecipes.slice(indexOfFirstRecipe, indexOfLastRecipe);
+  const currentRecipes = filteredRecipes.slice(
+    indexOfFirstRecipe,
+    indexOfLastRecipe
+  );
 
   // Cambiar de página
   const handlePageChange = (value) => {
@@ -112,7 +119,10 @@ const RecipeDetailPage = () => {
         <>
           <ul className="divide-y divide-gray-200">
             {currentRecipes.map((recipe) => (
-              <li key={recipe.id} className="py-4 flex justify-between items-center">
+              <li
+                key={recipe.id}
+                className="py-4 flex justify-between items-center"
+              >
                 <div>
                   <p className="font-bold">{recipe.recipe_name}</p>
                   <p className="text-gray-500">Costo: ${recipe.cost_recipe}</p>
@@ -160,7 +170,9 @@ const RecipeDetailPage = () => {
       {openModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded shadow-md">
-            <h2 className="text-lg font-bold mb-4">¿Estás seguro de que quieres eliminar esta receta?</h2>
+            <h2 className="text-lg font-bold mb-4">
+              ¿Estás seguro de que quieres eliminar esta receta?
+            </h2>
             <div className="flex justify-end space-x-4">
               <button
                 className="px-4 py-2 bg-red-500 text-white rounded"

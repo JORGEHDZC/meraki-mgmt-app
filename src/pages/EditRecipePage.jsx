@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   doc,
@@ -8,8 +8,8 @@ import {
   getDocs,
   query,
 } from "firebase/firestore";
-import { db } from "../firebaseConfig";
-import { Autocomplete } from "@mui/material";
+import { db, storage } from "../firebaseConfig"; // Import Firebase storage
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"; // Import Firebase storage functions
 import { Delete } from "@mui/icons-material";
 
 const EditRecipePage = () => {
@@ -20,12 +20,17 @@ const EditRecipePage = () => {
     cost_recipe: 0,
     quantity_portions: 0,
     ingredients_list: [],
+    image_url: "", // Added field for the recipe image
   }); // Estado para almacenar la receta
   const [ingredientOptions, setIngredientOptions] = useState([]); // Opciones de ingredientes desde la base de datos
-  const [ingredientInput, setIngredientInput] = useState(null); // Ingrediente seleccionado para agregar
+  const [ingredientInput, setIngredientInput] = useState(""); // Ingrediente seleccionado para agregar
   const [quantityUsed, setQuantityUsed] = useState(""); // Cantidad usada del nuevo ingrediente
   const [loading, setLoading] = useState(true); // Estado para controlar el cargando
   const [filteredOptions, setFilteredOptions] = useState([]);
+  const [newImage, setNewImage] = useState(null); // State to store the new image file
+  const [uploading, setUploading] = useState(false); // State to handle upload progress
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   // Función para obtener la receta desde Firestore
   const fetchRecipe = async () => {
@@ -100,7 +105,6 @@ const EditRecipePage = () => {
     }
   }, [ingredientInput, ingredientOptions]);
 
-
   // Función para manejar el cambio en los campos de texto
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -142,11 +146,52 @@ const EditRecipePage = () => {
         ingredients_list: recipe.ingredients_list,
         cost_recipe: recipe.cost_recipe, // Guardar el costo total actualizado
         quantity_portions: recipe.quantity_portions,
+        image_url: recipe.image_url, // Ensure the image_url is saved
       });
       navigate("/recipe-detail"); // Redirigir al listado de recetas después de actualizar
     } catch (error) {
       console.error("Error updating recipe:", error);
     }
+  };
+
+  // Función para manejar la selección de un nuevo archivo de imagen
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setNewImage(e.target.files[0]);
+    }
+  };
+
+  // Función para subir la nueva imagen a Firebase Storage
+  const handleImageUpload = () => {
+    if (!newImage) return;
+
+    setUploading(true);
+    const storageRef = ref(storage, `recipe_images/${id}`);
+    const uploadTask = uploadBytesResumable(storageRef, newImage);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        setSnackbarMessage("La imagen está cargada...");
+        setSnackbarOpen(true);
+        setTimeout(() => {
+          setSnackbarOpen(false);
+        }, 1500);
+      },
+      (error) => {
+        console.error("Error uploading image:", error);
+        setUploading(false);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          setRecipe((prevRecipe) => ({
+            ...prevRecipe,
+            image_url: downloadURL, // Update the image_url with the new download link
+          }));
+          setUploading(false);
+        });
+      }
+    );
   };
 
   // Calcular el costo total de la receta
@@ -169,40 +214,40 @@ const EditRecipePage = () => {
     }));
   };
 
- // Add ingredient to the list
- const handleAddIngredient = () => {
-  const ingredient = ingredientOptions.find(
-    (ing) => ing.name === ingredientInput
-  );
-  if (ingredient && quantityUsed) {
-    const cost = (ingredient.cost / ingredient.quantity) * quantityUsed;
-    setRecipe((prevRecipe) => ({
-      ...prevRecipe,
-      ingredients_list: [
-        ...prevRecipe.ingredients_list,
-        {
-          ingredient_id: ingredient.id,
-          name: ingredient.name,
-          quantity_used: parseInt(quantityUsed, 10),
-          cost_by_quantity_used: cost.toFixed(2),
-          unit: ingredient.unit,
-        },
-      ],
-      cost_recipe: (
-        parseFloat(prevRecipe.cost_recipe) + parseFloat(cost)
-      ).toFixed(2),
-    }));
-    setIngredientInput(""); // Clear input after adding ingredient
-    setFilteredOptions([]); // Hide dropdown after adding ingredient
-    setQuantityUsed(""); // Clear quantity input
-  } else {
-    alert("Please select an ingredient and enter a valid quantity.");
-  }
-};
+  // Add ingredient to the list
+  const handleAddIngredient = () => {
+    const ingredient = ingredientOptions.find(
+      (ing) => ing.name === ingredientInput
+    );
+    if (ingredient && quantityUsed) {
+      const cost = (ingredient.cost / ingredient.quantity) * quantityUsed;
+      setRecipe((prevRecipe) => ({
+        ...prevRecipe,
+        ingredients_list: [
+          ...prevRecipe.ingredients_list,
+          {
+            ingredient_id: ingredient.id,
+            name: ingredient.name,
+            quantity_used: parseInt(quantityUsed, 10),
+            cost_by_quantity_used: cost.toFixed(2),
+            unit: ingredient.unit,
+          },
+        ],
+        cost_recipe: (
+          parseFloat(prevRecipe.cost_recipe) + parseFloat(cost)
+        ).toFixed(2),
+      }));
+      setIngredientInput(""); // Clear input after adding ingredient
+      setFilteredOptions([]); // Hide dropdown after adding ingredient
+      setQuantityUsed(""); // Clear quantity input
+    } else {
+      alert("Please select an ingredient and enter a valid quantity.");
+    }
+  };
 
   // Función para regresar al listado de recetas sin hacer cambios
   const goBack = () => {
-    navigate("/dashboard");
+    navigate("/recipe-detail");
   };
 
   if (loading) {
@@ -212,7 +257,19 @@ const EditRecipePage = () => {
   return (
     <div className="container mx-auto py-4">
       <div className="max-w-lg mx-auto bg-white p-6 shadow-md rounded-md">
-        <h1 className="text-3xl font-semibold mb-4">Editar Receta</h1>
+        <h1 className="text-3xl font-semibold mb-4">Editar Receta:</h1>
+        <h2 className="text-2xl font-semibold mb-4">{recipe.recipe_name}</h2>
+
+        {/* Show recipe image */}
+        {recipe.image_url && (
+          <div className="mb-4">
+            <img
+              src={recipe.image_url}
+              alt={recipe.recipe_name}
+              className="w-full h-auto object-cover rounded-md"
+            />
+          </div>
+        )}
 
         <input
           type="text"
@@ -246,7 +303,10 @@ const EditRecipePage = () => {
 
         <ul className="mb-4">
           {recipe.ingredients_list.map((ingredient) => (
-            <li key={ingredient.ingredient_id} className="flex items-center mb-2">
+            <li
+              key={ingredient.ingredient_id}
+              className="flex items-center mb-2"
+            >
               <div className="flex-1">
                 <p className="font-semibold">{ingredient.name}</p>
                 <p className="text-sm text-gray-600">{`Costo: $${ingredient.cost_by_quantity_used}`}</p>
@@ -298,7 +358,6 @@ const EditRecipePage = () => {
           )}
         </div>
 
-
         <input
           type="number"
           value={quantityUsed}
@@ -313,6 +372,29 @@ const EditRecipePage = () => {
         >
           Añadir Ingrediente
         </button>
+
+        {/* Upload image section */}
+        <div className="mb-4">
+          <input
+            type="file"
+            onChange={handleImageChange}
+            className="w-full mb-2"
+          />
+          <button
+            onClick={handleImageUpload}
+            className={`w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 ${
+              uploading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            disabled={uploading}
+          >
+            {uploading ? "Subiendo Imagen..." : "Subir Imagen"}
+            {snackbarOpen && (
+              <div className="fixed bottom-4 left-4 bg-green-500 text-white p-4 rounded-md">
+                {snackbarMessage}
+              </div>
+            )}
+          </button>
+        </div>
 
         <div className="flex justify-between">
           <button
