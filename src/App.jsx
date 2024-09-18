@@ -8,11 +8,13 @@ import AdminApproveUsers from "./pages/AdminApproveUsers";
 import DashboardPage from "./pages/DashboardPage";
 import CreateRecipePage from "./pages/CreateRecipePage";
 import RegisterPage from "./pages/RegisterPage";
-import RecipeDetailPage from "./pages/RecipeDetailPage";
-import EditRecipePage from "./pages/EditRecipePage";
-import { Container } from "@mui/material";
-import "./styles/globals.css";
+import EditRecipesPage from "./pages/EditRecipesPage";
+import EditRecipeByIDPage from "./pages/EditRecipeByIDPage";
+import ViewRecipesPage from "./pages/ViewRecipesPage";
 import IngredientsPage from "./pages/IngredientsPage";
+import { Container } from "@mui/material";
+import PrivateRoute from "./context/PrivateRoute";
+import "./styles/globals.css";
 
 const App = () => {
   return (
@@ -22,12 +24,64 @@ const App = () => {
           <Routes>
             <Route path="/" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/approve-users" element={<AdminApproveUsers />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/create-recipe" element={<CreateRecipePage />} />
-            <Route path="/recipe-detail" element={<RecipeDetailPage />} />
-            <Route path="/edit-recipe/:id" element={<EditRecipePage />} />
-            <Route path="/ingredients" element={<IngredientsPage />} />
+
+            {/* Rutas protegidas */}
+            <Route
+              path="/approve-users"
+              element={
+                <PrivateRoute>
+                  <AdminApproveUsers />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <PrivateRoute>
+                  <DashboardPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/create-recipe"
+              element={
+                <PrivateRoute>
+                  <CreateRecipePage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-recipes"
+              element={
+                <PrivateRoute>
+                  <EditRecipesPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-recipe/:id"
+              element={
+                <PrivateRoute>
+                  <EditRecipeByIDPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/view-recipes"
+              element={
+                <PrivateRoute>
+                  <ViewRecipesPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/ingredients"
+              element={
+                <PrivateRoute>
+                  <IngredientsPage />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </Container>
       </Router>

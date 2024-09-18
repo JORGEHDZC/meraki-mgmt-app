@@ -12,7 +12,7 @@ import { db, storage } from "../firebaseConfig"; // Import Firebase storage
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"; // Import Firebase storage functions
 import { Delete } from "@mui/icons-material";
 
-const EditRecipePage = () => {
+const EditRecipeByIDPage = () => {
   const { id } = useParams(); // Obtener el ID de la receta desde los parámetros de la URL
   const navigate = useNavigate();
   const [recipe, setRecipe] = useState({
@@ -148,7 +148,7 @@ const EditRecipePage = () => {
         quantity_portions: recipe.quantity_portions,
         image_url: recipe.image_url, // Ensure the image_url is saved
       });
-      navigate("/recipe-detail"); // Redirigir al listado de recetas después de actualizar
+      navigate("/edit-recipes"); // Redirigir al listado de recetas después de actualizar
     } catch (error) {
       console.error("Error updating recipe:", error);
     }
@@ -247,7 +247,7 @@ const EditRecipePage = () => {
 
   // Función para regresar al listado de recetas sin hacer cambios
   const goBack = () => {
-    navigate("/recipe-detail");
+    navigate("/edit-recipes");
   };
 
   if (loading) {
@@ -415,4 +415,4 @@ const EditRecipePage = () => {
   );
 };
 
-export default EditRecipePage;
+export default EditRecipeByIDPage;

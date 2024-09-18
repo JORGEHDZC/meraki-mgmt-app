@@ -3,7 +3,7 @@ import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig"; // Tu archivo de configuración Firebase
 import { useNavigate } from "react-router-dom";
 
-const RecipeDetailPage = () => {
+const EditRecipesPage = () => {
   const [recipes, setRecipes] = useState([]); // Estado para almacenar todas las recetas
   const [filteredRecipes, setFilteredRecipes] = useState([]); // Estado para recetas filtradas
   const [openModal, setOpenModal] = useState(false); // Estado para controlar el modal
@@ -194,4 +194,4 @@ const RecipeDetailPage = () => {
   );
 };
 
-export default RecipeDetailPage;
+export default EditRecipesPage;

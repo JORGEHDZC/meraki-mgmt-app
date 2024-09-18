@@ -11,11 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/Card";
 import {
-  BookOpen,
+  FilePenLine,
   ClipboardList,
   PlusCircle,
   LogOut,
-  UserCheck,
+  NotebookTabs,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -42,13 +42,6 @@ export default function Dashboard() {
         <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Button
             className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
-            onClick={() => navigate("/create-recipe")}
-          >
-            <PlusCircle className="h-8 w-8 mb-2" />
-            Crear Nueva Receta
-          </Button>
-          <Button
-            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
             onClick={() => navigate("/ingredients")}
           >
             <ClipboardList className="h-8 w-8 mb-2" />
@@ -56,9 +49,23 @@ export default function Dashboard() {
           </Button>
           <Button
             className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
-            onClick={() => navigate("/recipe-detail")}
+            onClick={() => navigate("/create-recipe")}
           >
-            <BookOpen className="h-8 w-8 mb-2" />
+            <PlusCircle className="h-8 w-8 mb-2" />
+            Crear Nueva Receta
+          </Button>
+          <Button
+            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
+            onClick={() => navigate("/edit-recipes")}
+          >
+            <FilePenLine className="h-8 w-8 mb-2" />
+            Editar Recetas
+          </Button>
+          <Button
+            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
+            onClick={() => navigate("/view-recipes")}
+          >
+            <NotebookTabs className="h-8 w-8 mb-2" />
             Ver Recetas
           </Button>
           {/* <Button
