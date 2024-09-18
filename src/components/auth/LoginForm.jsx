@@ -1,14 +1,12 @@
-"use client";
-
 import { useState, useContext } from "react";
 import { LockIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "./../../context/AuthContext";
 
 export default function LoginForm() {
-  const { login } = useContext(AuthContext);
+  const { login, authError } = useContext(AuthContext); // Obtenemos el authError del contexto
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -47,6 +45,7 @@ export default function LoginForm() {
           <LockIcon className="h-6 w-6 text-secondary-foreground" />
         </div>
         <h1 className="text-2xl font-bold mb-6">Iniciar Sesión</h1>
+        {authError && <p className="text-red-500 text-sm mb-4">{authError}</p>}
         <form onSubmit={handleSubmit} className="w-full space-y-4">
           <Input
             type="email"
