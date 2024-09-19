@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebaseConfig";
+import { db } from "../firebaseConfig"; // Asegúrate de tener configurado tu Firebase
 import { useNavigate } from "react-router-dom";
-import { ceil } from "lodash"; // lodash para redondear los valores
 
 const ViewRecipesPage = () => {
   const [recepies, setRecepies] = useState([]);
   const [filteredRecepies, setFilteredRecepies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedPortions, setSelectedPortions] = useState(10); // Combobox para seleccionar las porciones
-  const recipesPerPage = 3;
+  const recipesPerPage = 3; // Máximo de recetas por página en dispositivos móviles
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,13 +31,13 @@ const ViewRecipesPage = () => {
     fetchRecepies();
   }, []);
 
-  // Filtrar recetas basadas en el término de búsqueda
+  // Filtra las recetas según el término de búsqueda
   useEffect(() => {
     const filtered = recepies.filter((recipe) =>
       recipe.recipe_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredRecepies(filtered);
-    setCurrentPage(1);
+    setCurrentPage(1); // Resetea la página actual al filtrar
   }, [searchTerm, recepies]);
 
   // Obtener las recetas para la página actual
@@ -49,38 +47,6 @@ const ViewRecipesPage = () => {
     indexOfFirstRecipe,
     indexOfLastRecipe
   );
-
-  // Función para recalcular el costo y las cantidades de los ingredientes
-  const recalculateRecipe = (recipe) => {
-    const portionsFactor =
-      selectedPortions === 10 ? 1 : selectedPortions === 15 ? 1.5 : 2;
-
-    const updatedIngredients = recipe.ingredients_list.map((ingredient) => {
-      // Recalcular la cantidad usada y redondear al siguiente entero
-      const newQuantityUsed = ceil(ingredient.quantity_used * portionsFactor);
-      const newCostByQuantityUsed = (
-        (ingredient.cost / ingredient.quantity) *
-        newQuantityUsed
-      ).toFixed(2);
-
-      return {
-        ...ingredient,
-        quantity_used: newQuantityUsed,
-        cost_by_quantity_used: newCostByQuantityUsed,
-      };
-    });
-
-    // Calcular el costo total basado en las nuevas cantidades
-    const updatedCostRecipe = updatedIngredients
-      .reduce((total, ing) => total + parseFloat(ing.cost_by_quantity_used), 0)
-      .toFixed(2);
-
-    return {
-      ...recipe,
-      ingredients_list: updatedIngredients,
-      cost_recipe: updatedCostRecipe,
-    };
-  };
 
   // Cambiar página
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -106,56 +72,29 @@ const ViewRecipesPage = () => {
         />
       </div>
 
-      {/* Selector de porciones */}
-      <div className="flex justify-center mb-6">
-        <label className="mr-4">Seleccionar porciones:</label>
-        <select
-          value={selectedPortions}
-          onChange={(e) => setSelectedPortions(parseInt(e.target.value))}
-          className="border border-gray-300 p-2 rounded"
-        >
-          <option value={10}>10 porciones</option>
-          <option value={15}>15 porciones</option>
-          <option value={20}>20 porciones</option>
-        </select>
-      </div>
-
       {/* Recetas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {currentRecipes.map((recipe) => {
-          const updatedRecipe = recalculateRecipe(recipe);
-          return (
-            <div
-              key={recipe.id}
-              className="bg-white shadow-lg rounded-lg overflow-hidden"
-            >
-              <img
-                src={recipe.image_url}
-                alt={recipe.recipe_name}
-                className="w-full h-48 object-cover"
-              />
-              <div className="p-4">
-                <h2 className="text-2xl font-bold mb-2">
-                  {recipe.recipe_name}
-                </h2>
-                <p className="text-gray-700">
-                  Precio: <b>${updatedRecipe.cost_recipe}</b>
-                </p>
-                <p className="text-gray-700">
-                  Porciones: <b>{selectedPortions}</b>
-                </p>
-                <ul className="text-gray-700 mt-2">
-                  {updatedRecipe.ingredients_list.map((ingredient) => (
-                    <li key={ingredient.ingredient_id}>
-                      {ingredient.name}: {ingredient.quantity_used}{" "}
-                      {ingredient.unit}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        {currentRecipes.map((recipe) => (
+          <div
+            key={recipe.id}
+            className="bg-white shadow-lg rounded-lg overflow-hidden"
+          >
+            <img
+              src={recipe.image_url}
+              alt={recipe.recipe_name}
+              className="w-full h-48 object-cover"
+            />
+            <div className="p-4">
+              <h2 className="text-2xl font-bold mb-2">{recipe.recipe_name}</h2>
+              <p className="text-gray-700 mb-2">
+                Precio: ${recipe.cost_recipe}
+              </p>
+              <p className="text-gray-700">
+                Porciones: {recipe.quantity_portions}
+              </p>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {/* Paginación */}
