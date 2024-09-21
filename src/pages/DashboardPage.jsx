@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+import { Button } from "../components/ui/Button";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/Card";
+} from "../components/ui/Card";
 import {
   FilePenLine,
   ClipboardList,
