@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { useNavigate } from "react-router-dom";
-import { ceil } from "lodash"; // lodash para redondear los valores
 
 const ViewRecipesPage = () => {
   const [recepies, setRecepies] = useState([]);
   const [filteredRecepies, setFilteredRecepies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedPortions, setSelectedPortions] = useState(10); // Combobox para seleccionar las porciones
+  const [portionsMap, setPortionsMap] = useState({}); // Para manejar las porciones por receta
   const recipesPerPage = 3;
   const navigate = useNavigate();
 
@@ -25,6 +24,13 @@ const ViewRecipesPage = () => {
         }));
         setRecepies(recepiesList);
         setFilteredRecepies(recepiesList);
+
+        // Inicializar el estado de porciones basado en las porciones originales
+        const initialPortionsMap = {};
+        recepiesList.forEach((recipe) => {
+          initialPortionsMap[recipe.id] = recipe.quantity_portions;
+        });
+        setPortionsMap(initialPortionsMap);
       } catch (error) {
         console.error("Error fetching recipes:", error);
       }
@@ -51,13 +57,15 @@ const ViewRecipesPage = () => {
   );
 
   // Función para recalcular el costo y las cantidades de los ingredientes
-  const recalculateRecipe = (recipe) => {
-    const portionsFactor =
-      selectedPortions === 10 ? 1 : selectedPortions === 15 ? 1.5 : 2;
+  const recalculateRecipe = (recipe, selectedPortions) => {
+    const originalPortions = recipe.quantity_portions; // Porciones originales almacenadas en la receta
+    const portionFactor = selectedPortions / originalPortions;
 
     const updatedIngredients = recipe.ingredients_list.map((ingredient) => {
-      // Recalcular la cantidad usada y redondear al siguiente entero
-      const newQuantityUsed = ceil(ingredient.quantity_used * portionsFactor);
+      // Recalcular la cantidad usada aplicando el factor de porciones
+      const newQuantityUsed = (
+        ingredient.quantity_used * portionFactor
+      ).toFixed(2);
       const newCostByQuantityUsed = (
         (ingredient.cost / ingredient.quantity) *
         newQuantityUsed
@@ -85,6 +93,14 @@ const ViewRecipesPage = () => {
   // Cambiar página
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+  // Actualizar las porciones seleccionadas para una receta específica
+  const handlePortionChange = (recipeId, newPortions) => {
+    setPortionsMap((prevPortionsMap) => ({
+      ...prevPortionsMap,
+      [recipeId]: newPortions,
+    }));
+  };
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-4xl font-bold text-center mb-8">Mis Recetas</h1>
@@ -106,24 +122,14 @@ const ViewRecipesPage = () => {
         />
       </div>
 
-      {/* Selector de porciones */}
-      <div className="flex justify-center mb-6">
-        <label className="mr-4">Seleccionar porciones:</label>
-        <select
-          value={selectedPortions}
-          onChange={(e) => setSelectedPortions(parseInt(e.target.value))}
-          className="border border-gray-300 p-2 rounded"
-        >
-          <option value={10}>10 porciones</option>
-          <option value={15}>15 porciones</option>
-          <option value={20}>20 porciones</option>
-        </select>
-      </div>
-
       {/* Recetas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {currentRecipes.map((recipe) => {
-          const updatedRecipe = recalculateRecipe(recipe);
+          const selectedPortions =
+            portionsMap[recipe.id] || recipe.quantity_portions;
+
+          const updatedRecipe = recalculateRecipe(recipe, selectedPortions);
+
           return (
             <div
               key={recipe.id}
@@ -144,6 +150,23 @@ const ViewRecipesPage = () => {
                 <p className="text-gray-700">
                   Porciones: <b>{selectedPortions}</b>
                 </p>
+
+                {/* Selector de porciones independiente por receta */}
+                <div className="mb-4">
+                  <label className="mr-4">Seleccionar porciones:</label>
+                  <select
+                    value={selectedPortions}
+                    onChange={(e) =>
+                      handlePortionChange(recipe.id, parseInt(e.target.value))
+                    }
+                    className="border border-gray-300 p-2 rounded"
+                  >
+                    <option value={10}>10 porciones</option>
+                    <option value={15}>15 porciones</option>
+                    <option value={20}>20 porciones</option>
+                  </select>
+                </div>
+
                 <ul className="text-gray-700 mt-2">
                   {updatedRecipe.ingredients_list.map((ingredient) => (
                     <li key={ingredient.ingredient_id}>
