@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+  addDoc,
+} from "firebase/firestore"; // Importar `addDoc`
 import { db } from "../firebaseConfig"; // Tu archivo de configuración Firebase
 import { useNavigate } from "react-router-dom";
+import { Pencil, CircleX, CopyPlus } from "lucide-react";
 
 const EditRecipesPage = () => {
   const [recipes, setRecipes] = useState([]); // Estado para almacenar todas las recetas
@@ -43,6 +50,26 @@ const EditRecipesPage = () => {
         setRecipeToDelete(null); // Reiniciar el estado de la receta a eliminar
       } catch (error) {
         console.error("Error deleting recipe:", error);
+      }
+    }
+  };
+
+  // Función para duplicar una receta
+  const handleDuplicate = async (id) => {
+    const recipeToDuplicate = recipes.find((recipe) => recipe.id === id);
+    if (recipeToDuplicate) {
+      const duplicatedRecipe = {
+        ...recipeToDuplicate,
+        recipe_name: `${recipeToDuplicate.recipe_name} - duplicated`, // Añadir " - duplicated" al nombre
+      };
+      delete duplicatedRecipe.id; // Eliminar el ID para que Firebase asigne uno nuevo
+      try {
+        // Guardar la receta duplicada en Firebase con un nuevo ID
+        await addDoc(collection(db, "recepies"), duplicatedRecipe);
+        // Recargar recetas después de duplicar
+        fetchRecipes();
+      } catch (error) {
+        console.error("Error duplicating recipe:", error);
       }
     }
   };
@@ -132,13 +159,19 @@ const EditRecipesPage = () => {
                     onClick={() => navigate(`/edit-recipe/${recipe.id}`)}
                     className="text-blue-500 hover:text-blue-700"
                   >
-                    Editar
+                    <Pencil></Pencil>
+                  </button>
+                  <button
+                    onClick={() => handleDuplicate(recipe.id)} // Botón para duplicar receta
+                    className="text-green-500 hover:text-green-700"
+                  >
+                    <CopyPlus></CopyPlus>
                   </button>
                   <button
                     onClick={() => confirmDelete(recipe.id)}
                     className="text-red-500 hover:text-red-700"
                   >
-                    Eliminar
+                    <CircleX></CircleX>
                   </button>
                 </div>
               </li>

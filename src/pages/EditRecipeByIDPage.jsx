@@ -11,6 +11,16 @@ import {
 import { db, storage } from "../firebaseConfig"; // Import Firebase storage
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"; // Import Firebase storage functions
 import { Delete } from "@mui/icons-material";
+import {
+  TextField,
+  Button,
+  Input,
+  IconButton,
+  Typography,
+  Box,
+  Grid,
+  Snackbar,
+} from "@mui/material";
 
 const EditRecipeByIDPage = () => {
   const { id } = useParams(); // Obtener el ID de la receta desde los parámetros de la URL
@@ -251,55 +261,64 @@ const EditRecipeByIDPage = () => {
   };
 
   if (loading) {
-    return <p className="text-center text-lg">Cargando receta...</p>;
+    return <Typography align="center">Cargando receta...</Typography>;
   }
 
   return (
-    <div className="container mx-auto py-4">
-      <div className="max-w-lg mx-auto bg-white p-6 shadow-md rounded-md">
-        <h1 className="text-3xl font-semibold mb-4">Editar Receta:</h1>
-        <h2 className="text-2xl font-semibold mb-4">{recipe.recipe_name}</h2>
+    <Box className="container mx-auto py-4">
+      <Box className="max-w-lg mx-auto bg-white p-6 shadow-md rounded-md">
+        <Typography variant="h4" gutterBottom>
+          Editar Receta:
+        </Typography>
+        <Typography variant="h5" gutterBottom>
+          {recipe.recipe_name}
+        </Typography>
 
-        {/* Show recipe image */}
+        {/* Mostrar imagen de la receta */}
         {recipe.image_url && (
-          <div className="mb-4">
+          <Box mb={4}>
             <img
               src={recipe.image_url}
               alt={recipe.recipe_name}
               className="w-full h-auto object-cover rounded-md"
             />
-          </div>
+          </Box>
         )}
 
-        <input
-          type="text"
+        <TextField
+          label="Nombre de la receta"
           name="recipe_name"
           value={recipe.recipe_name}
           onChange={handleInputChange}
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          placeholder="Nombre de la receta"
+          fullWidth
+          margin="normal"
+          variant="outlined"
         />
 
-        <input
-          type="number"
+        <TextField
+          label="Costo de la receta"
           name="cost_recipe"
           value={recipe.cost_recipe}
           onChange={handleInputChange}
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
+          fullWidth
+          margin="normal"
+          variant="outlined"
           disabled
-          placeholder="Costo de la receta"
         />
 
-        <input
-          type="number"
+        <TextField
+          label="Porciones"
           name="quantity_portions"
           value={recipe.quantity_portions}
           onChange={handleInputChange}
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          placeholder="Porciones"
+          fullWidth
+          margin="normal"
+          variant="outlined"
         />
 
-        <h2 className="text-xl font-medium mb-2">Ingredientes</h2>
+        <Typography variant="h6" gutterBottom>
+          Ingredientes
+        </Typography>
 
         <ul className="mb-4">
           {recipe.ingredients_list.map((ingredient) => (
@@ -307,111 +326,130 @@ const EditRecipeByIDPage = () => {
               key={ingredient.ingredient_id}
               className="flex items-center mb-2"
             >
-              <div className="flex-1">
-                <p className="font-semibold">{ingredient.name}</p>
-                <p className="text-sm text-gray-600">{`Costo: $${ingredient.cost_by_quantity_used}`}</p>
-              </div>
-              <input
+              <Box className="flex-1">
+                <Typography variant="subtitle1">{ingredient.name}</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {`Costo: $${ingredient.cost_by_quantity_used}`}
+                </Typography>
+              </Box>
+              <TextField
                 type="number"
+                label={ingredient.unit}
                 value={ingredient.quantity_used}
                 onChange={(e) =>
                   handleEditQuantity(ingredient.ingredient_id, e.target.value)
                 }
-                className="w-20 mr-4 p-2 border border-gray-300 rounded-md"
+                variant="outlined"
+                className="w-20 mr-4"
               />
-              <button
+              <IconButton
                 onClick={() => handleDeleteIngredient(ingredient.ingredient_id)}
-                className="text-red-500 hover:text-red-700"
+                color="error"
               >
                 <Delete />
-              </button>
+              </IconButton>
             </li>
           ))}
         </ul>
 
-        {/* Ingredient Search Input */}
-        <div className="relative w-full mb-4">
-          <input
-            type="text"
-            placeholder="Buscar Ingrediente"
-            className="w-full p-2 border border-gray-300 rounded-md"
-            value={ingredientInput}
-            onChange={(e) => setIngredientInput(e.target.value)}
-          />
+        {/* Input de búsqueda de ingredientes */}
+        <TextField
+          label="Buscar Ingrediente"
+          value={ingredientInput}
+          onChange={(e) => setIngredientInput(e.target.value)}
+          fullWidth
+          margin="normal"
+          variant="outlined"
+        />
 
-          {/* Show filtered options */}
-          {ingredientInput && filteredOptions.length > 0 && (
-            <ul className="absolute bg-white border border-gray-300 rounded-md mt-1 w-full z-10">
-              {filteredOptions.map((option) => (
-                <li
-                  key={option.id}
-                  className="p-2 hover:bg-blue-100 cursor-pointer"
-                  onClick={() => {
-                    setIngredientInput(option.name);
-                    setFilteredOptions([]);
-                  }}
-                >
-                  {option.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {/* Opciones filtradas */}
+        {ingredientInput && filteredOptions.length > 0 && (
+          <ul className="absolute bg-white border border-gray-300 rounded-md mt-1 w-full z-10">
+            {filteredOptions.map((option) => (
+              <li
+                key={option.id}
+                className="p-2 hover:bg-blue-100 cursor-pointer"
+                onClick={() => {
+                  setIngredientInput(option.name);
+                  setFilteredOptions([]);
+                }}
+              >
+                {option.name}
+              </li>
+            ))}
+          </ul>
+        )}
 
-        <input
+        <TextField
+          label="Cantidad Usada"
           type="number"
           value={quantityUsed}
           onChange={(e) => setQuantityUsed(e.target.value)}
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          placeholder="Cantidad Usada"
+          fullWidth
+          margin="normal"
+          variant="outlined"
         />
 
-        <button
+        <Button
           onClick={handleAddIngredient}
-          className="w-full mb-4 bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
+          variant="contained"
+          color="primary"
+          fullWidth
+          className="mb-6"
         >
           Añadir Ingrediente
-        </button>
+        </Button>
 
-        {/* Upload image section */}
-        <div className="mb-4">
-          <input
+        {/* Subir imagen */}
+        <Box mb={4}>
+          <Input
             type="file"
             onChange={handleImageChange}
-            className="w-full mb-2"
+            fullWidth
+            className="mb-2"
           />
-          <button
+          <Button
             onClick={handleImageUpload}
-            className={`w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 ${
-              uploading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            variant="contained"
+            color="primary"
+            fullWidth
             disabled={uploading}
           >
             {uploading ? "Subiendo Imagen..." : "Subir Imagen"}
-            {snackbarOpen && (
-              <div className="fixed bottom-4 left-4 bg-green-500 text-white p-4 rounded-md">
-                {snackbarMessage}
-              </div>
-            )}
-          </button>
-        </div>
+          </Button>
+        </Box>
 
-        <div className="flex justify-between">
-          <button
-            onClick={handleUpdate}
-            className="w-1/2 mr-2 bg-green-500 text-white p-2 rounded-md hover:bg-green-600"
-          >
-            Actualizar Receta
-          </button>
-          <button
-            onClick={goBack}
-            className="w-1/2 ml-2 bg-gray-500 text-white p-2 rounded-md hover:bg-gray-600"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Button
+              onClick={handleUpdate}
+              variant="contained"
+              color="success"
+              fullWidth
+            >
+              Actualizar
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              onClick={goBack}
+              variant="contained"
+              color="error"
+              fullWidth
+            >
+              Cancelar
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
+
+      <Snackbar
+        open={snackbarOpen}
+        message={snackbarMessage}
+        autoHideDuration={1500}
+        onClose={() => setSnackbarOpen(false)}
+      />
+    </Box>
   );
 };
 
