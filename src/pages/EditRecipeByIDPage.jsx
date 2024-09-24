@@ -20,6 +20,8 @@ import {
   Box,
   Grid,
   Snackbar,
+  MenuItem,
+  Select,
 } from "@mui/material";
 
 const EditRecipeByIDPage = () => {
@@ -30,15 +32,16 @@ const EditRecipeByIDPage = () => {
     cost_recipe: 0,
     quantity_portions: 0,
     ingredients_list: [],
-    image_url: "", // Added field for the recipe image
+    image_url: "", // Campo para la imagen de la receta
+    type: "cookie", // Campo añadido para el tipo de receta
   }); // Estado para almacenar la receta
   const [ingredientOptions, setIngredientOptions] = useState([]); // Opciones de ingredientes desde la base de datos
   const [ingredientInput, setIngredientInput] = useState(""); // Ingrediente seleccionado para agregar
   const [quantityUsed, setQuantityUsed] = useState(""); // Cantidad usada del nuevo ingrediente
   const [loading, setLoading] = useState(true); // Estado para controlar el cargando
   const [filteredOptions, setFilteredOptions] = useState([]);
-  const [newImage, setNewImage] = useState(null); // State to store the new image file
-  const [uploading, setUploading] = useState(false); // State to handle upload progress
+  const [newImage, setNewImage] = useState(null); // Estado para la nueva imagen
+  const [uploading, setUploading] = useState(false); // Estado para manejar la carga de imágenes
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -103,7 +106,7 @@ const EditRecipeByIDPage = () => {
     fetchIngredients();
   }, [id]);
 
-  // Filter ingredients based on input
+  // Filtrar ingredientes basados en la entrada
   useEffect(() => {
     if (ingredientInput) {
       const filtered = ingredientOptions.filter((ingredient) =>
@@ -111,7 +114,7 @@ const EditRecipeByIDPage = () => {
       );
       setFilteredOptions(filtered);
     } else {
-      setFilteredOptions([]); // Clear the options when there is no input
+      setFilteredOptions([]); // Limpiar las opciones cuando no hay entrada
     }
   }, [ingredientInput, ingredientOptions]);
 
@@ -156,7 +159,8 @@ const EditRecipeByIDPage = () => {
         ingredients_list: recipe.ingredients_list,
         cost_recipe: recipe.cost_recipe, // Guardar el costo total actualizado
         quantity_portions: recipe.quantity_portions,
-        image_url: recipe.image_url, // Ensure the image_url is saved
+        image_url: recipe.image_url, // Asegurarse de que la URL de la imagen se guarde
+        type: recipe.type, // Guardar el tipo de receta actualizado
       });
       navigate("/edit-recipes"); // Redirigir al listado de recetas después de actualizar
     } catch (error) {
@@ -196,7 +200,7 @@ const EditRecipeByIDPage = () => {
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
           setRecipe((prevRecipe) => ({
             ...prevRecipe,
-            image_url: downloadURL, // Update the image_url with the new download link
+            image_url: downloadURL, // Actualizar el campo image_url con la nueva URL
           }));
           setUploading(false);
         });
@@ -224,7 +228,7 @@ const EditRecipeByIDPage = () => {
     }));
   };
 
-  // Add ingredient to the list
+  // Función para añadir un nuevo ingrediente
   const handleAddIngredient = () => {
     const ingredient = ingredientOptions.find(
       (ing) => ing.name === ingredientInput
@@ -247,11 +251,11 @@ const EditRecipeByIDPage = () => {
           parseFloat(prevRecipe.cost_recipe) + parseFloat(cost)
         ).toFixed(2),
       }));
-      setIngredientInput(""); // Clear input after adding ingredient
-      setFilteredOptions([]); // Hide dropdown after adding ingredient
-      setQuantityUsed(""); // Clear quantity input
+      setIngredientInput(""); // Limpiar el input después de añadir el ingrediente
+      setFilteredOptions([]); // Ocultar las opciones después de añadir el ingrediente
+      setQuantityUsed(""); // Limpiar la cantidad usada
     } else {
-      alert("Please select an ingredient and enter a valid quantity.");
+      alert("Por favor, seleccione un ingrediente y una cantidad válida.");
     }
   };
 
@@ -315,6 +319,22 @@ const EditRecipeByIDPage = () => {
           margin="normal"
           variant="outlined"
         />
+
+        {/* Nuevo selector para el tipo de receta */}
+        <Box mb={4}>
+          <Typography variant="h6" gutterBottom>
+            Tipo de Receta
+          </Typography>
+          <Select
+            value={recipe.type}
+            onChange={(e) => setRecipe({ ...recipe, type: e.target.value })}
+            fullWidth
+          >
+            <MenuItem value="cookie">Cookie</MenuItem>
+            <MenuItem value="cake">Cake</MenuItem>
+            <MenuItem value="cupcake">Cupcake</MenuItem>
+          </Select>
+        </Box>
 
         <Typography variant="h6" gutterBottom>
           Ingredientes

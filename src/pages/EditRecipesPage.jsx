@@ -28,8 +28,12 @@ const EditRecipesPage = () => {
         id: doc.id,
         ...doc.data(),
       }));
-      setRecipes(fetchedRecipes);
-      setFilteredRecipes(fetchedRecipes);
+      // Ordenar las recetas por nombre en orden ascendente
+      const sortedRecipes = fetchedRecipes.sort((a, b) =>
+        a.recipe_name.localeCompare(b.recipe_name)
+      );
+      setRecipes(sortedRecipes);
+      setFilteredRecipes(sortedRecipes);
     } catch (error) {
       console.error("Error fetching recepies:", error);
     }

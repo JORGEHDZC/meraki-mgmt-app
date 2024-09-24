@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { db, storage } from "../firebaseConfig"; // Ensure your Firebase config is correctly imported
+import { db, storage } from "../firebaseConfig";
 import { collection, addDoc, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import Firebase storage methods
-import { useNavigate } from "react-router-dom"; // Hook for navigation
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
 
 const CreateRecipePage = () => {
   const [recipeName, setRecipeName] = useState("");
@@ -20,6 +20,7 @@ const CreateRecipePage = () => {
   const [imageFile, setImageFile] = useState(null); // State for image file
   const [imageUrl, setImageUrl] = useState(""); // State for image URL after upload
   const [loading, setLoading] = useState(false);
+  const [recipeType, setRecipeType] = useState("cookie"); // New state for recipe type
 
   const navigate = useNavigate();
 
@@ -107,7 +108,8 @@ const CreateRecipePage = () => {
       recipeName &&
       quantityPortions &&
       ingredientsList.length >= 3 &&
-      createDate
+      createDate &&
+      recipeType // Ensure recipeType is selected
     ) {
       const recipeData = {
         recipe_name: recipeName,
@@ -120,6 +122,7 @@ const CreateRecipePage = () => {
         cost_recipe: calculateTotalCost(),
         create_date: createDate,
         image_url: uploadedImageUrl, // Save the image URL if available
+        type: recipeType, // Add the type of the recipe
       };
 
       try {
@@ -134,6 +137,7 @@ const CreateRecipePage = () => {
         setCreateDate(new Date());
         setImageFile(null);
         setImageUrl(uploadedImageUrl || ""); // Show image preview after upload
+        setRecipeType("cookie"); // Reset recipe type
       } catch (error) {
         console.error("Error al guardar la receta:", error);
         setSnackbarMessage("Error al guardar la receta");
@@ -150,11 +154,10 @@ const CreateRecipePage = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col h-screen overflow-y-auto">
-        
         <h1 className="text-4xl font-bold mb-4">Crear Nueva Receta</h1>
 
         <div className="mb-4">
-        <button
+          <button
             className="bg-red-500 text-white px-4 py-2 rounded mb-4"
             onClick={() => navigate("/dashboard")}
           >
@@ -178,6 +181,20 @@ const CreateRecipePage = () => {
           onChange={(e) => setQuantityPortions(e.target.value)}
         />
 
+        {/* Dropdown to select the recipe type */}
+        <div className="mb-4">
+          <label className="block mb-2 font-bold">Tipo de Receta:</label>
+          <select
+            value={recipeType}
+            onChange={(e) => setRecipeType(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md"
+          >
+            <option value="cookie">Cookie</option>
+            <option value="cake">Cake</option>
+            <option value="cupcake">Cupcake</option>
+          </select>
+        </div>
+
         {/* Ingredient Search Input */}
         <div className="relative w-full mb-4">
           <input
@@ -187,7 +204,7 @@ const CreateRecipePage = () => {
             value={ingredientInput}
             onChange={(e) => setIngredientInput(e.target.value)}
           />
-          
+
           {/* Show the filtered options only when the user has typed something */}
           {ingredientInput && filteredOptions.length > 0 && (
             <ul className="absolute bg-white border border-gray-300 rounded-md mt-1 w-full z-10">
@@ -259,7 +276,6 @@ const CreateRecipePage = () => {
           >
             {loading ? "Guardando..." : "Guardar Receta"}
           </button>
-         
         </div>
 
         {snackbarOpen && (

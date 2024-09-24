@@ -28,7 +28,7 @@ const ViewRecipesPage = () => {
         // Inicializar el estado de porciones basado en las porciones originales
         const initialPortionsMap = {};
         recepiesList.forEach((recipe) => {
-          initialPortionsMap[recipe.id] = recipe.quantity_portions;
+          initialPortionsMap[recipe.id] = 1; // Mostrar inicialmente porción para 1
         });
         setPortionsMap(initialPortionsMap);
       } catch (error) {
@@ -58,36 +58,72 @@ const ViewRecipesPage = () => {
 
   // Función para recalcular el costo y las cantidades de los ingredientes
   const recalculateRecipe = (recipe, selectedPortions) => {
-    const originalPortions = recipe.quantity_portions; // Porciones originales almacenadas en la receta
-    const portionFactor = selectedPortions / originalPortions;
+    if (recipe.type === "cake") {
+      // Lógica original para "cake"
+      const originalPortions = recipe.quantity_portions;
+      const portionFactor = selectedPortions / originalPortions;
 
-    const updatedIngredients = recipe.ingredients_list.map((ingredient) => {
-      // Recalcular la cantidad usada aplicando el factor de porciones
-      const newQuantityUsed = (
-        ingredient.quantity_used * portionFactor
-      ).toFixed(2);
-      const newCostByQuantityUsed = (
-        (ingredient.cost / ingredient.quantity) *
-        newQuantityUsed
-      ).toFixed(2);
+      const updatedIngredients = recipe.ingredients_list.map((ingredient) => {
+        const newQuantityUsed = (
+          ingredient.quantity_used * portionFactor
+        ).toFixed(2);
+        const newCostByQuantityUsed = (
+          (ingredient.cost / ingredient.quantity) *
+          newQuantityUsed
+        ).toFixed(2);
+
+        return {
+          ...ingredient,
+          quantity_used: newQuantityUsed,
+          cost_by_quantity_used: newCostByQuantityUsed,
+        };
+      });
+
+      const updatedCostRecipe = updatedIngredients
+        .reduce(
+          (total, ing) => total + parseFloat(ing.cost_by_quantity_used),
+          0
+        )
+        .toFixed(2);
 
       return {
-        ...ingredient,
-        quantity_used: newQuantityUsed,
-        cost_by_quantity_used: newCostByQuantityUsed,
+        ...recipe,
+        ingredients_list: updatedIngredients,
+        cost_recipe: updatedCostRecipe,
       };
-    });
+    } else {
+      // Nueva lógica para "cookie" y "cupcake"
+      const multiplier = selectedPortions; // selectedPortions será 1, 2, 4, 6, o 8
 
-    // Calcular el costo total basado en las nuevas cantidades
-    const updatedCostRecipe = updatedIngredients
-      .reduce((total, ing) => total + parseFloat(ing.cost_by_quantity_used), 0)
-      .toFixed(2);
+      const updatedIngredients = recipe.ingredients_list.map((ingredient) => {
+        const newQuantityUsed = (ingredient.quantity_used * multiplier).toFixed(
+          2
+        );
+        const newCostByQuantityUsed = (
+          (ingredient.cost / ingredient.quantity) *
+          newQuantityUsed
+        ).toFixed(2);
 
-    return {
-      ...recipe,
-      ingredients_list: updatedIngredients,
-      cost_recipe: updatedCostRecipe,
-    };
+        return {
+          ...ingredient,
+          quantity_used: newQuantityUsed,
+          cost_by_quantity_used: newCostByQuantityUsed,
+        };
+      });
+
+      const updatedCostRecipe = updatedIngredients
+        .reduce(
+          (total, ing) => total + parseFloat(ing.cost_by_quantity_used),
+          0
+        )
+        .toFixed(2);
+
+      return {
+        ...recipe,
+        ingredients_list: updatedIngredients,
+        cost_recipe: updatedCostRecipe,
+      };
+    }
   };
 
   // Cambiar página
@@ -125,8 +161,7 @@ const ViewRecipesPage = () => {
       {/* Recetas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {currentRecipes.map((recipe) => {
-          const selectedPortions =
-            portionsMap[recipe.id] || recipe.quantity_portions;
+          const selectedPortions = portionsMap[recipe.id] || 1; // Mostrar la receta con porción 1 inicialmente
 
           const updatedRecipe = recalculateRecipe(recipe, selectedPortions);
 
@@ -151,7 +186,7 @@ const ViewRecipesPage = () => {
                   Porciones: <b>{selectedPortions}</b>
                 </p>
 
-                {/* Selector de porciones independiente por receta */}
+                {/* Selector de porciones según el tipo de receta */}
                 <div className="mb-4">
                   <label className="mr-4">Seleccionar porciones:</label>
                   <select
@@ -161,9 +196,21 @@ const ViewRecipesPage = () => {
                     }
                     className="border border-gray-300 p-2 rounded"
                   >
-                    <option value={10}>10 porciones</option>
-                    <option value={15}>15 porciones</option>
-                    <option value={20}>20 porciones</option>
+                    {recipe.type === "cake" ? (
+                      <>
+                        <option value={10}>10 porciones</option>
+                        <option value={15}>15 porciones</option>
+                        <option value={20}>20 porciones</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value={1}>1 porción</option>
+                        <option value={2}>Multiplicar por 2</option>
+                        <option value={4}>Multiplicar por 4</option>
+                        <option value={6}>Multiplicar por 6</option>
+                        <option value={8}>Multiplicar por 8</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
