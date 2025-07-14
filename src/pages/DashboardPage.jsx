@@ -1,91 +1,68 @@
-import { Button } from "../components/ui/Button";
-import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/Card";
-import {
-  FilePenLine,
-  ClipboardList,
-  PlusCircle,
-  LogOut,
-  NotebookTabs,
-} from "lucide-react";
+import { AuthContext } from "../context/AuthContext";
+import { ClipboardList, FilePenLine, LogOut } from "lucide-react";
+import cupcakeIcon from "../assets/icons/cupcake.png";
+import { Button } from "../components/ui/Button";
 
 export default function Dashboard() {
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  if (showSplash) {
+    return (
+      <div className="splash-screen">
+        <img src={cupcakeIcon} alt="Cupcake" className="cupcake-icon" />
+        <h1 className="splash-title">Meraki App</h1>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary">
-            Bienvenido al Dashboard, Usuario!
-          </CardTitle>
-          <CardDescription className="text-center text-lg mt-2">
-            Este es tu panel principal donde puedes gestionar tus recetas,
-            ingredientes, y más.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="dashboard-content">
+      <div className="card">
+        <h1 className="card-title">¡Bienvenido, Merakier!</h1>
+        <p
+          className="card-description"
+          style={{ textAlign: "center", marginBottom: "1.5em" }}
+        >
+          Gestiona tus recetas, ingredientes y crea dulces inolvidables 🍩
+        </p>
+
+        <div className="button-stack">
           <Button
-            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
+            className="dashboard-button"
             onClick={() => navigate("/ingredients")}
           >
-            <ClipboardList className="h-8 w-8 mb-2" />
-            Lista de Ingredientes
+            <ClipboardList className="dashboard-icon" />
+            <span>Lista de Ingredientes</span>
           </Button>
+
           <Button
-            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
-            onClick={() => navigate("/create-recipe")}
-          >
-            <PlusCircle className="h-8 w-8 mb-2" />
-            Crear Nueva Receta
-          </Button>
-          <Button
-            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
+            className="dashboard-button"
             onClick={() => navigate("/edit-recipes")}
           >
-            <FilePenLine className="h-8 w-8 mb-2" />
-            Editar Recetas
+            <FilePenLine className="dashboard-icon" />
+            <span>Recetas</span>
           </Button>
-          <Button
-            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
-            onClick={() => navigate("/view-recipes")}
-          >
-            <NotebookTabs className="h-8 w-8 mb-2" />
-            Ver Recetas
+
+          <Button className="dashboard-button" onClick={handleLogout}>
+            <LogOut className="dashboard-icon" />
+            <span>Cerrar Sesión</span>
           </Button>
-          {/* <Button
-            className="h-32 flex flex-col justify-center items-center text-lg font-semibold"
-            onClick={() => navigate("/approve-users")}
-          >
-            <UserCheck className="h-8 w-8 mb-2" />
-            Aceptar Usuarios
-          </Button> */}
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button
-            className="mt-4 bg-red-500 hover:bg-red-600 text-white flex flex-row items-center justify-center"
-            onClick={handleLogout}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Cerrar Sesión
-          </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

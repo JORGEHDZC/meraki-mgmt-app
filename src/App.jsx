@@ -10,10 +10,10 @@ import CreateRecipePage from "./pages/CreateRecipePage";
 import RegisterPage from "./pages/RegisterPage";
 import EditRecipesPage from "./pages/EditRecipesPage";
 import EditRecipeByIDPage from "./pages/EditRecipeByIDPage";
-import ViewRecipesPage from "./pages/ViewRecipesPage";
 import IngredientsPage from "./pages/IngredientsPage";
 import { Container } from "@mui/material";
 import PrivateRoute from "./context/PrivateRoute";
+import Profile from "./pages/Profile";
 import "./styles/globals.css";
 
 const App = () => {
@@ -34,6 +34,7 @@ const App = () => {
                 </PrivateRoute>
               }
             />
+            <Route path="/profile" element={<Profile />} />
             <Route
               path="/dashboard"
               element={
@@ -63,14 +64,6 @@ const App = () => {
               element={
                 <PrivateRoute>
                   <EditRecipeByIDPage />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/view-recipes"
-              element={
-                <PrivateRoute>
-                  <ViewRecipesPage />
                 </PrivateRoute>
               }
             />

@@ -8,7 +8,8 @@ import {
 } from "firebase/firestore"; // Importar `addDoc`
 import { db } from "../firebaseConfig"; // Tu archivo de configuración Firebase
 import { useNavigate } from "react-router-dom";
-import { Pencil, CircleX, CopyPlus } from "lucide-react";
+import { Pencil, CircleX, CopyPlus, CirclePlus, ArrowLeft } from "lucide-react";
+import { Button } from "../components/ui/Button";
 
 const EditRecipesPage = () => {
   const [recipes, setRecipes] = useState([]); // Estado para almacenar todas las recetas
@@ -90,11 +91,6 @@ const EditRecipesPage = () => {
     setRecipeToDelete(null);
   };
 
-  // Función para navegar al dashboard
-  const goToDashboard = () => {
-    navigate("/dashboard");
-  };
-
   // Cargar todas las recetas cuando el componente se monte
   useEffect(() => {
     fetchRecipes();
@@ -125,108 +121,123 @@ const EditRecipesPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Recetas Disponibles</h1>
-
-      <button
-        className="bg-red-500 text-white px-4 py-2 rounded mb-4"
-        onClick={goToDashboard}
-      >
-        Regresar al Dashboard
-      </button>
-
-      {/* Barra de búsqueda */}
-      <input
-        type="text"
-        placeholder="Buscar Recetas"
-        className="w-full mb-4 p-2 border border-gray-300 rounded"
-        value={searchQuery}
-        onChange={handleSearch}
-      />
-
-      {currentRecipes.length === 0 ? (
-        <p>No hay recetas disponibles.</p>
-      ) : (
-        <>
-          <ul className="divide-y divide-gray-200">
-            {currentRecipes.map((recipe) => (
-              <li
-                key={recipe.id}
-                className="py-4 flex justify-between items-center"
+    <div className="dashboard-container">
+      <div className="dashboard-content">
+        <div className="card">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+            <h1 className="text-2xl font-bold text-[var(--primary)]">
+              Recetas Disponibles
+            </h1>
+            <div className="flex gap-2">
+              <Button
+                className="dashboard-button"
+                onClick={() => navigate("/dashboard")}
               >
-                <div>
-                  <p className="font-bold">{recipe.recipe_name}</p>
-                  <p className="text-gray-500">Costo: ${recipe.cost_recipe}</p>
+                <ArrowLeft size={30} />
+                <span>Dashboard</span>
+              </Button>
+              <Button
+                className="dashboard-button"
+                onClick={() => navigate("/create-recipe")}
+              >
+                <CirclePlus size={30} />
+                <span>Añadir receta</span>
+              </Button>
+            </div>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Buscar Recetas"
+            className="rounded-md p-2 border border-gray-300 w-full mb-4"
+            value={searchQuery}
+            onChange={handleSearch}
+          />
+
+          {currentRecipes.length === 0 ? (
+            <p>No hay recetas disponibles.</p>
+          ) : (
+            <div className="grid gap-4">
+              {currentRecipes.map((recipe) => (
+                <div
+                  key={recipe.id}
+                  className="card flex flex-col md:flex-row md:items-center justify-between p-4"
+                >
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--primary)]">
+                      <span className="font-bold">{recipe.recipe_name}</span>
+                    </h3>
+                    <p className="text-gray-600">
+                      Costo:{" "}
+                      <span className="font-bold">${recipe.cost_recipe}</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-3 mt-2 md:mt-0">
+                    <button
+                      onClick={() => navigate(`/edit-recipe/${recipe.id}`)}
+                      className="text-white-500 hover:text-blue-700 edit-button"
+                      title="Editar"
+                    >
+                      <Pencil size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDuplicate(recipe.id)}
+                      className="text-white-500 hover:text-green-700 edit-button"
+                      title="Duplicar"
+                    >
+                      <CopyPlus size={20} />
+                    </button>
+                    <button
+                      onClick={() => confirmDelete(recipe.id)}
+                      className="text-white-500 hover:text-red-700 edit-button"
+                      title="Eliminar"
+                    >
+                      <CircleX size={20} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => navigate(`/edit-recipe/${recipe.id}`)}
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    <Pencil></Pencil>
-                  </button>
-                  <button
-                    onClick={() => handleDuplicate(recipe.id)} // Botón para duplicar receta
-                    className="text-green-500 hover:text-green-700"
-                  >
-                    <CopyPlus></CopyPlus>
-                  </button>
-                  <button
-                    onClick={() => confirmDelete(recipe.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <CircleX></CircleX>
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          )}
 
           {/* Paginación */}
-          <div className="flex justify-center mt-4">
-            <button
-              className="px-4 py-2 mx-1 bg-gray-300 rounded"
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <Button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
-              Anterior
-            </button>
-            <span className="px-4 py-2">{currentPage}</span>
-            <button
-              className="px-4 py-2 mx-1 bg-gray-300 rounded"
+              ← Anterior
+            </Button>
+            <span style={{ fontWeight: "bold", fontSize: "8px" }}>
+              Página {currentPage}
+            </span>
+            <Button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={indexOfLastRecipe >= filteredRecipes.length}
             >
-              Siguiente
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Modal para confirmar la eliminación de la receta */}
-      {openModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded shadow-md">
-            <h2 className="text-lg font-bold mb-4">
-              ¿Estás seguro de que quieres eliminar esta receta?
-            </h2>
-            <div className="flex justify-end space-x-4">
-              <button
-                className="px-4 py-2 bg-red-500 text-white rounded"
-                onClick={handleDelete}
-              >
-                Eliminar
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-300 rounded"
-                onClick={closeModal}
-              >
-                Cancelar
-              </button>
-            </div>
+              Siguiente →
+            </Button>
           </div>
         </div>
-      )}
+
+        {/* Modal de confirmación */}
+        {openModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded shadow-md max-w-sm w-full">
+              <h2 className="text-lg font-bold mb-4 text-[var(--primary)]">
+                ¿Eliminar esta receta?
+              </h2>
+              <p className="mb-4 text-gray-700">
+                Esta acción no se puede deshacer.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button onClick={handleDelete}>Eliminar</Button>
+                <Button onClick={closeModal}>Cancelar</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

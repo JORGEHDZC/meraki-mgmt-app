@@ -6,7 +6,7 @@ import { Input } from "../ui/Input";
 import { AuthContext } from "./../../context/AuthContext";
 
 export default function LoginForm() {
-  const { login, authError } = useContext(AuthContext); // Obtenemos el authError del contexto
+  const { login, authError } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -39,14 +39,34 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="container mx-auto max-w-md mt-8">
-      <div className="flex flex-col items-center">
-        <div className="bg-secondary p-3 rounded-full mb-4">
-          <LockIcon className="h-6 w-6 text-secondary-foreground" />
+    <div className="dashboard-container">
+      <div className="login-background"></div>
+
+      <div className="card" style={{ textAlign: "center" }}>
+        <div
+          style={{
+            backgroundColor: "var(--secondary)",
+            padding: "1em",
+            borderRadius: "50%",
+            display: "inline-block",
+            marginBottom: "1em",
+          }}
+        >
+          <LockIcon
+            style={{ color: "var(--primary)", width: "32px", height: "32px" }}
+          />
         </div>
-        <h1 className="text-2xl font-bold mb-6">Iniciar Sesión</h1>
-        {authError && <p className="text-red-500 text-sm mb-4">{authError}</p>}
-        <form onSubmit={handleSubmit} className="w-full space-y-4">
+
+        <h1 className="card-title">Iniciar Sesión</h1>
+
+        {authError && (
+          <p style={{ color: "red", marginBottom: "1em" }}>{authError}</p>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: "1em" }}
+        >
           <Input
             type="email"
             id="email"
@@ -54,7 +74,6 @@ export default function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full"
           />
           <Input
             type="password"
@@ -63,13 +82,20 @@ export default function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full"
           />
-          {formError && <p className="text-red-500 text-sm">{formError}</p>}
-          <Button type="submit" className="w-full">
-            Iniciar Sesión
-          </Button>
-          <div className="flex justify-between text-sm">
+          {formError && (
+            <p style={{ color: "red", fontSize: "0.9em" }}>{formError}</p>
+          )}
+
+          <Button type="submit">Iniciar Sesión</Button>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.9em",
+            }}
+          >
             <Button variant="link" size="sm">
               ¿Olvidaste tu contraseña?
             </Button>

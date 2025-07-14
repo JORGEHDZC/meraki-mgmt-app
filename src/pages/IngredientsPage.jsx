@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebaseConfig";
+import { ArrowLeft, CirclePlus, ArrowRight } from "lucide-react";
 import {
   collection,
   getDocs,
@@ -10,6 +11,14 @@ import {
   doc,
   query,
 } from "firebase/firestore";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+
+import { Button } from "../components/ui/Button";
 
 const normalizeIngredient = (ingredient) => {
   return ingredient
@@ -19,7 +28,7 @@ const normalizeIngredient = (ingredient) => {
     .trim();
 };
 
-const IngredientsPage = () => {
+export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -34,10 +43,13 @@ const IngredientsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [openModal, setOpenModal] = useState(false);
   const [ingredientToDelete, setIngredientToDelete] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const navigate = useNavigate();
   const ingredientsCollectionRef = collection(db, "ingredients");
-
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -45,25 +57,8 @@ const IngredientsPage = () => {
       const data = await getDocs(ingredientsCollectionRef);
       setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     };
-
     fetchIngredients();
   }, []);
-
-  const handleIngredientChange = (e) => {
-    setCurrentIngredient(e.target.value);
-  };
-
-  const handleQuantityChange = (e) => {
-    setQuantity(e.target.value);
-  };
-
-  const handleUnitChange = (e) => {
-    setUnit(e.target.value);
-  };
-
-  const handleCostChange = (e) => {
-    setCost(e.target.value);
-  };
 
   const handleSaveIngredient = async () => {
     if (!currentIngredient.trim()) {
@@ -72,72 +67,132 @@ const IngredientsPage = () => {
       return;
     }
 
-    if (
-      !quantity ||
-      isNaN(parseInt(quantity, 10)) ||
-      parseInt(quantity, 10) <= 0
-    ) {
-      setSnackbarMessage("La cantidad debe ser un número entero positivo");
+    if (!quantity || isNaN(quantity) || quantity <= 0) {
+      setSnackbarMessage("La cantidad debe ser un número positivo");
       setSnackbarOpen(true);
       return;
     }
 
-    if (isNaN(parseFloat(cost)) || parseFloat(cost) < 0) {
+    if (isNaN(cost) || cost < 0) {
       setSnackbarMessage("El costo debe ser un número positivo");
       setSnackbarOpen(true);
       return;
     }
 
     const normalizedIngredient = normalizeIngredient(currentIngredient);
+    const storage = getStorage();
+    let imageUrl = "";
 
-    if (editMode) {
-      const ingredientDoc = doc(db, "ingredients", ingredientToEdit);
-      await updateDoc(ingredientDoc, {
-        name: currentIngredient.trim(),
-        quantity,
-        cost,
-        unit,
-      });
-      await handleUpdateIngredientCostOrQuantity(
-        ingredientToEdit,
-        cost,
-        quantity
-      );
-      setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
-      setSnackbarOpen(true);
-      setTimeout(() => {
-        setSnackbarOpen(false);
-      }, 1500);
-    } else {
-      const ingredientExists = ingredients.some(
-        (ingredient) =>
-          normalizeIngredient(ingredient.name) === normalizedIngredient
-      );
+    try {
+      if (imageFile) {
+        if (!imageFile.type.startsWith("image/")) {
+          setSnackbarMessage("El archivo debe ser una imagen.");
+          setSnackbarOpen(true);
+          return;
+        }
 
-      if (ingredientExists) {
-        setSnackbarMessage("El ingrediente ya existe");
-        setSnackbarOpen(true);
-        return;
+        if (imageFile.size > 2 * 1024 * 1024) {
+          setSnackbarMessage("La imagen es demasiado grande. Máximo 2MB.");
+          setSnackbarOpen(true);
+          return;
+        }
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const imageRef = ref(
+          storage,
+          `ingredients_images/${Date.now()}_${imageFile.name}`
+        );
+        const uploadTask = uploadBytesResumable(imageRef, imageFile);
+
+        await new Promise((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress =
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(progress);
+            },
+            (error) => {
+              console.error("Error al subir la imagen:", error);
+              setSnackbarMessage("Hubo un problema al subir la imagen.");
+              setSnackbarOpen(true);
+              setIsUploading(false);
+              reject(error);
+            },
+            async () => {
+              imageUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              setIsUploading(false);
+              resolve();
+            }
+          );
+        });
       }
 
-      await addDoc(ingredientsCollectionRef, {
-        name: currentIngredient.trim(),
-        quantity,
-        cost,
-        unit,
-      });
-      setSnackbarMessage(`${currentIngredient} agregado correctamente`);
+      if (editMode) {
+        const ingredientDoc = doc(db, "ingredients", ingredientToEdit);
+        await updateDoc(ingredientDoc, {
+          name: currentIngredient.trim(),
+          quantity,
+          cost,
+          unit,
+          ...(imageUrl && { imageUrl }),
+        });
+        await handleUpdateIngredientCostOrQuantity(
+          ingredientToEdit,
+          cost,
+          quantity
+        );
+        setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
+      } else {
+        const exists = ingredients.some(
+          (ing) => normalizeIngredient(ing.name) === normalizedIngredient
+        );
+        if (exists) {
+          setSnackbarMessage("El ingrediente ya existe");
+          setSnackbarOpen(true);
+          return;
+        }
+
+        await addDoc(ingredientsCollectionRef, {
+          name: currentIngredient.trim(),
+          quantity,
+          cost,
+          unit,
+          imageUrl,
+        });
+        setSnackbarMessage(`${currentIngredient} agregado correctamente`);
+      }
+
+      const data = await getDocs(ingredientsCollectionRef);
+      setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+
+      setCurrentIngredient("");
+      setQuantity("");
+      setCost("");
+      setImageFile(null);
+      setPreviewUrl(null);
+      setUnit("gramos");
+      setEditMode(false);
+      setIngredientToEdit("");
+      setSnackbarOpen(true);
+      setTimeout(() => setSnackbarOpen(false), 1500);
+    } catch (error) {
+      console.error("Error al guardar el ingrediente:", error);
+      setSnackbarMessage("Ocurrió un error al guardar el ingrediente.");
+      setSnackbarOpen(true);
+      setIsUploading(false);
     }
+  };
 
-    const data = await getDocs(ingredientsCollectionRef);
-    setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-
-    setCurrentIngredient("");
-    setQuantity("");
-    setCost("");
-    setEditMode(false);
-    setIngredientToEdit("");
-    setSnackbarOpen(true);
+  const handleEditIngredient = (ingredient) => {
+    setCurrentIngredient(ingredient.name);
+    setQuantity(ingredient.quantity || "");
+    setCost(ingredient.cost || "");
+    setUnit(ingredient.unit || "gramos");
+    setEditMode(true);
+    setIngredientToEdit(ingredient.id);
   };
 
   const handleDeleteIngredient = async () => {
@@ -150,53 +205,37 @@ const IngredientsPage = () => {
     setSnackbarOpen(true);
   };
 
-  const handleEditIngredient = (ingredient) => {
-    setCurrentIngredient(ingredient.name);
-    setQuantity(ingredient.quantity || "");
-    setCost(ingredient.cost || "");
-    setUnit(ingredient.unit || "gramos");
-    setEditMode(true);
-    setIngredientToEdit(ingredient.id);
-  };
-
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    const filteredIngredients = ingredients.filter((ingredient) =>
-      ingredient.name.toLowerCase().includes(e.target.value.toLowerCase())
+    const filtered = ingredients.filter((ing) =>
+      ing.name.toLowerCase().includes(e.target.value.toLowerCase())
     );
-    if (filteredIngredients.length === 0 && e.target.value.trim() !== "") {
-      setNoResultsMessage(`${e.target.value} no existe, favor de agregarlo`);
-    } else {
-      setNoResultsMessage("");
-    }
+    setNoResultsMessage(
+      filtered.length === 0 && e.target.value.trim() !== ""
+        ? `${e.target.value} no existe, favor de agregarlo`
+        : ""
+    );
   };
 
   const filteredIngredients = ingredients
-    .filter((ingredient) =>
-      ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter((ing) => ing.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const indexOfLastIngredient = currentPage * itemsPerPage;
-  const indexOfFirstIngredient = indexOfLastIngredient - itemsPerPage;
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
   const currentIngredients = filteredIngredients.slice(
-    indexOfFirstIngredient,
-    indexOfLastIngredient
+    indexOfFirst,
+    indexOfLast
   );
 
-  const handlePageChange = (direction) => {
-    setCurrentPage((prevPage) => {
-      if (direction === "next") {
-        return prevPage + 1;
-      } else if (direction === "prev" && prevPage > 1) {
-        return prevPage - 1;
-      }
-      return prevPage;
-    });
+  const handlePageChange = (dir) => {
+    setCurrentPage((prev) =>
+      dir === "next" ? prev + 1 : dir === "prev" && prev > 1 ? prev - 1 : prev
+    );
   };
 
-  const openDeleteModal = (ingredientId) => {
-    setIngredientToDelete(ingredientId);
+  const openDeleteModal = (id) => {
+    setIngredientToDelete(id);
     setOpenModal(true);
   };
 
@@ -205,221 +244,299 @@ const IngredientsPage = () => {
     setIngredientToDelete("");
   };
 
-  // Función para actualizar recetas cuando un ingrediente se modifica
-  const updateRecipesWithModifiedIngredient = async (
-    ingredientId,
-    newCost,
-    newQuantity
-  ) => {
-    try {
-      const q = query(collection(db, "recepies"));
-      const querySnapshot = await getDocs(q);
+  const updateRecipesWithModifiedIngredient = async (id, newCost, newQty) => {
+    const q = query(collection(db, "recepies"));
+    const snapshot = await getDocs(q);
 
-      for (const recipeDoc of querySnapshot.docs) {
-        const recipeData = recipeDoc.data();
-
-        const updatedIngredients = recipeData.ingredients_list.map(
-          (ingredient) => {
-            if (ingredient.ingredient_id === ingredientId) {
-              const newCostByQuantityUsed = calculateNewCostByQuantityUsed(
-                newCost,
-                newQuantity,
-                ingredient.quantity_used
-              );
-              return {
-                ...ingredient,
-                cost: newCost,
-                quantity: newQuantity,
-                cost_by_quantity_used: newCostByQuantityUsed,
-              };
-            }
-            return ingredient;
-          }
-        );
-
-        const updatedRecipeCost =
-          recalculateRecipeTotalCost(updatedIngredients);
-
-        if (
-          recipeData.ingredients_list.some(
-            (ingredient) => ingredient.ingredient_id === ingredientId
-          )
-        ) {
-          await updateDoc(doc(db, "recepies", recipeDoc.id), {
-            ingredients_list: updatedIngredients,
-            cost_recipe: updatedRecipeCost,
-          });
+    for (const recipeDoc of snapshot.docs) {
+      const data = recipeDoc.data();
+      const updatedIngredients = data.ingredients_list.map((ing) => {
+        if (ing.ingredient_id === id) {
+          const costByQty = ((newCost / newQty) * ing.quantity_used).toFixed(2);
+          return {
+            ...ing,
+            cost: newCost,
+            quantity: newQty,
+            cost_by_quantity_used: costByQty,
+          };
         }
+        return ing;
+      });
+
+      const totalCost = updatedIngredients
+        .reduce((sum, ing) => sum + parseFloat(ing.cost_by_quantity_used), 0)
+        .toFixed(2);
+
+      if (data.ingredients_list.some((ing) => ing.ingredient_id === id)) {
+        await updateDoc(doc(db, "recepies", recipeDoc.id), {
+          ingredients_list: updatedIngredients,
+          cost_recipe: totalCost,
+        });
       }
-    } catch (error) {
-      console.error("Error actualizando las recetas:", error);
     }
   };
 
-  // Función para calcular el nuevo cost_by_quantity_used
-  const calculateNewCostByQuantityUsed = (cost, quantity, quantityUsed) => {
-    return ((cost / quantity) * quantityUsed).toFixed(2);
-  };
-
-  // Función para recalcular el costo total de la receta
-  const recalculateRecipeTotalCost = (ingredients_list) => {
-    return ingredients_list
-      .reduce((total, ing) => total + parseFloat(ing.cost_by_quantity_used), 0)
-      .toFixed(2);
-  };
-
-  // Llama a esta función cuando se actualice el costo o la cantidad de un ingrediente
-  const handleUpdateIngredientCostOrQuantity = async (
-    ingredientId,
-    newCost,
-    newQuantity
-  ) => {
-    await updateRecipesWithModifiedIngredient(
-      ingredientId,
-      newCost,
-      newQuantity
-    );
+  const handleUpdateIngredientCostOrQuantity = async (id, cost, qty) => {
+    await updateRecipesWithModifiedIngredient(id, cost, qty);
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-4xl font-bold mb-4">Lista de Ingredientes</h1>
+    <div className="dashboard-container">
+      <div className="dashboard-content">
+        <div className="card">
+          <h1 className="card-title">Lista de Ingredientes</h1>
 
-      <div className="mb-4">
-        <button
-          className="bg-red-500 text-white px-4 py-2 rounded mb-4"
-          onClick={() => navigate("/dashboard")}
-        >
-          Regresar al Dashboard
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold mb-2">
-          {editMode ? "Editar Ingrediente" : "Agregar Nuevo Ingrediente"}
-        </h2>
-
-        <input
-          type="text"
-          placeholder="Nombre del Ingrediente"
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          value={currentIngredient}
-          onChange={handleIngredientChange}
-        />
-
-        <input
-          type="number"
-          placeholder="Cantidad"
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          value={quantity}
-          onChange={handleQuantityChange}
-        />
-
-        <select
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          value={unit}
-          onChange={handleUnitChange}
-        >
-          <option value="gramos">Gramos</option>
-          <option value="mililitros">Mililitros</option>
-          <option value="piezas">Piezas</option>
-        </select>
-
-        <input
-          type="number"
-          placeholder="Costo"
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          value={cost}
-          onChange={handleCostChange}
-        />
-
-        <button
-          className="w-full mb-4 bg-blue-500 text-white p-2 rounded-md"
-          onClick={handleSaveIngredient}
-        >
-          {editMode ? "Actualizar Ingrediente" : "Agregar Ingrediente"}
-        </button>
-
-        <input
-          type="text"
-          placeholder="Buscar Ingredientes"
-          className="w-full mb-4 p-2 border border-gray-300 rounded-md"
-          value={searchQuery}
-          onChange={handleSearchChange}
-        />
-
-        {noResultsMessage && <p className="text-red-500">{noResultsMessage}</p>}
-
-        <ul className="mb-4">
-          {currentIngredients.map((ingredient) => (
-            <li
-              key={ingredient.id}
-              className="flex justify-between items-center border-b py-2"
+          <div className="button-stack">
+            <Button
+              className="dashboard-button"
+              onClick={() => navigate("/dashboard")}
             >
-              <div className="flex flex-col">
-                <span className="font-bold">{ingredient.name}</span>
-                <ul className="text-left space-y-1">
-                  <li>
-                    <span className="text-gray-500">
-                      Cantidad: {ingredient.quantity} {ingredient.unit}{" "}
-                    </span>
-                  </li>
-                  <li>
-                    <span className="text-gray-500">
-                      Costo: ${ingredient.cost}{" "}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-              <div className="flex">
-                <button
-                  className="text-blue-500 mr-2"
-                  onClick={() => handleEditIngredient(ingredient)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="text-red-500"
-                  onClick={() => openDeleteModal(ingredient.id)}
-                >
-                  Eliminar
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+              <ArrowLeft size={30} />
+              <span>Dashboard</span>
+            </Button>
+          </div>
 
-        <div className="flex justify-between">
-          <button
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
-            onClick={() => handlePageChange("prev")}
-            disabled={currentPage === 1}
+          <h2 style={{ fontSize: "1.5em", marginTop: "1em" }}>
+            {editMode ? "Editar Ingrediente" : "Agregar Nuevo Ingrediente"}
+          </h2>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1em",
+              marginTop: "1em",
+            }}
           >
-            Anterior
-          </button>
-          <span>Página {currentPage}</span>
-          <button
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
-            onClick={() => handlePageChange("next")}
-            disabled={indexOfLastIngredient >= filteredIngredients.length}
+            <input
+              type="text"
+              placeholder="Nombre del Ingrediente"
+              value={currentIngredient}
+              onChange={(e) => setCurrentIngredient(e.target.value)}
+              className="rounded-md p-2 border border-gray-300"
+            />
+            <input
+              type="number"
+              placeholder="Cantidad"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="rounded-md p-2 border border-gray-300"
+            />
+            <select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              className="rounded-md p-2 border border-gray-300"
+            >
+              <option value="gramos">Gramos</option>
+              <option value="mililitros">Mililitros</option>
+              <option value="piezas">Piezas</option>
+            </select>
+            <input
+              type="number"
+              placeholder="Costo"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              className="rounded-md p-2 border border-gray-300"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                setImageFile(file);
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => setPreviewUrl(reader.result);
+                  reader.readAsDataURL(file);
+                } else {
+                  setPreviewUrl(null);
+                }
+              }}
+              className="rounded-md p-2 border border-gray-300"
+            />
+            {previewUrl && (
+              <div style={{ position: "relative", marginBottom: "1em" }}>
+                <img
+                  src={previewUrl}
+                  alt="Vista previa"
+                  className="rounded-md shadow-md"
+                  style={{
+                    width: "100%",
+                    maxHeight: "200px",
+                    objectFit: "cover",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setPreviewUrl(null);
+                  }}
+                  className="remove-image-button"
+                  aria-label="Eliminar imagen"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="white"
+                  >
+                    <path d="M3 6h18v2H3V6zm2 3h14v13H5V9zm3 2v9h2v-9H8zm4 0v9h2v-9h-2z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {isUploading && (
+              <div style={{ marginBottom: "1em" }}>
+                <p style={{ color: "var(--primary)", fontWeight: "bold" }}>
+                  Subiendo imagen... 🍰
+                </p>
+                <div
+                  style={{
+                    height: "8px",
+                    backgroundColor: "#fbe3e4",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${uploadProgress}%`,
+                      height: "100%",
+                      backgroundColor: "var(--primary)",
+                      transition: "width 0.3s ease",
+                    }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {isUploading && (
+              <p style={{ color: "var(--primary)", fontWeight: "bold" }}>
+                Subiendo imagen... 🍰
+              </p>
+            )}
+
+            <Button onClick={handleSaveIngredient} className="edit-button">
+              <CirclePlus size={30} />
+              <span>
+                {editMode ? "Actualizar Ingrediente" : "Agregar Ingrediente"}
+              </span>
+            </Button>
+            <input
+              type="text"
+              placeholder="Buscar Ingredientes"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="rounded-md p-2 border border-gray-300"
+            />
+            {noResultsMessage && (
+              <p style={{ color: "red" }}>{noResultsMessage}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="ingredient-list">
+            {currentIngredients.map((ingredient) => (
+              <div key={ingredient.id} className="card ingredient-card">
+                {ingredient.imageUrl && (
+                  <img
+                    src={ingredient.imageUrl}
+                    alt={`Imagen de ${ingredient.name}`}
+                    className="ingredient-image"
+                  />
+                )}
+                <div style={{ padding: "0.5em 0" }}>
+                  <h3
+                    style={{
+                      fontSize: "1.2em",
+                      marginBottom: "0.5em",
+                      color: "var(--primary)",
+                    }}
+                  >
+                    <span className="font-bold">{ingredient.name}</span>
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "0.95em",
+                      color: "var(--text-dark)",
+                      marginBottom: "0.5em",
+                    }}
+                  >
+                    <span>
+                      Cantidad:{" "}
+                      <span className="font-bold">
+                        {ingredient.quantity}{" "}
+                        {ingredient.unit === "mililitros"
+                          ? "ml"
+                          : ingredient.unit === "gramos"
+                          ? "gr"
+                          : "pz"}
+                      </span>
+                    </span>
+
+                    <br />
+                    <span>
+                      Costo:{" "}
+                      <span className="font-bold">${ingredient.cost}</span>
+                    </span>
+                  </p>
+                </div>
+                <div className="button-stack">
+                  <Button onClick={() => handleEditIngredient(ingredient)}>
+                    Editar
+                  </Button>
+                  <Button onClick={() => openDeleteModal(ingredient.id)}>
+                    Eliminar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <br />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            Siguiente
-          </button>
+            <Button
+              onClick={() => handlePageChange("prev")}
+              disabled={currentPage === 1}
+            >
+              <ArrowLeft size={30}></ArrowLeft>
+              <span>Anterior</span>
+            </Button>
+            <span>Página {currentPage}</span>
+            <Button
+              onClick={() => handlePageChange("next")}
+              disabled={indexOfLast >= filteredIngredients.length}
+            >
+              <span>Siguiente</span>
+              <ArrowRight size={30}></ArrowRight>
+            </Button>
+          </div>
         </div>
       </div>
 
       {snackbarOpen && (
-        <div className="fixed bottom-4 left-4 bg-green-500 text-white p-4 rounded-md">
+        <div className="fixed bottom-4 left-4 bg-green-500 text-white p-4 rounded-md shadow-md">
           {snackbarMessage}
         </div>
       )}
 
       {openModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-4 rounded-md relative">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-4 rounded-md relative max-w-sm w-full">
             <button
-              className="absolute top-0 right-0 m-2 text-gray-500 hover:text-gray-700"
-              onClick={() => setOpenModal(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={closeDeleteModal}
             >
               &times;
             </button>
@@ -427,25 +544,13 @@ const IngredientsPage = () => {
               Confirmación de Eliminación
             </h2>
             <p>¿Está seguro de que desea eliminar este ingrediente?</p>
-            <div className="flex justify-end mt-4">
-              <button
-                className="px-4 py-2 bg-gray-300 rounded-md mr-2"
-                onClick={closeDeleteModal}
-              >
-                Cancelar
-              </button>
-              <button
-                className="px-4 py-2 bg-red-500 text-white rounded-md"
-                onClick={handleDeleteIngredient}
-              >
-                Eliminar
-              </button>
+            <div className="flex justify-end mt-4 gap-2">
+              <Button onClick={closeDeleteModal}>Cancelar</Button>
+              <Button onClick={handleDeleteIngredient}>Eliminar</Button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-export default IngredientsPage;
+}

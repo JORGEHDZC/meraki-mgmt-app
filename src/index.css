@@ -1,11 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Pacifico&display=swap");
+
+/* 🎨 Paleta de colores pastel */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --primary: #d23c8b;
+  --secondary: #fbe3e4;
+  --accent: #ffb347;
+  --text-dark: #4b2e2e;
+  --bg-light: #fff5f7;
+  --card-bg: #ffffff;
+  --shadow: rgba(0, 0, 0, 0.1);
+
+  color: var(--text-dark);
+  background-color: var(--bg-light);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,56 +23,414 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+/* 🧱 Utilidades */
+.shadow {
+  box-shadow: 0 4px 6px var(--shadow);
 }
-a:hover {
-  color: #535bf2;
+.shadow-lg {
+  box-shadow: 0 8px 16px var(--shadow);
+}
+.rounded {
+  border-radius: 16px;
+}
+.rounded-lg {
+  border-radius: 20px;
+}
+.center-text {
+  text-align: center;
+}
+.btn {
+  border: none;
+  border-radius: 16px;
+  padding: 1em 1.5em;
+  font-size: 1.1em;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.3s ease;
+}
+.btn:hover {
+  background-color: #c797b5;
+  transform: scale(1.05);
+}
+.btn:focus,
+.btn:focus-visible {
+  outline: 4px auto var(--accent);
 }
 
+/* ✨ Animaciones */
+@keyframes fadeSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spinCupcake {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 🧁 Layout general */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  padding: 1em;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-light);
+  background-image: url("https://www.transparenttextures.com/patterns/cream-dust.png");
+  background-repeat: repeat;
+  background-size: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+.dashboard-container {
+  animation: fadeSlideUp 0.8s ease-out;
+  padding-bottom: 4em;
+  padding: 1em;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.dashboard-content {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 2em;
+}
+
+/* 🧁 Tarjetas */
+.card {
+  background-color: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 4px 8px var(--shadow);
+  padding: 1em;
+}
+
+.card,
+.ingredient-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 8px var(--shadow);
+}
+
+.card-title,
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-family: "Pacifico", cursive;
+  font-size: 2.5em;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 0.5em;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* 📱 Botones */
+
+.button-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.edit-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 1em;
+  border-radius: 16px;
+  background-color: var(--primary);
+  color: white;
+  font-size: 1.1em;
+  font-weight: 600;
+  box-shadow: 0 4px 6px var(--shadow);
+  transition: transform 0.2s ease;
+  text-align: center;
+  width: fit-content;
+  margin: 0 auto; /* 👈 centra horizontalmente */
+}
+
+/* Para pantallas grandes: alinear a la izquierda y ocupar ancho completo */
+@media (min-width: 768px) {
+  .edit-button {
+    justify-content: flex-start;
+    text-align: left;
+    width: 100%;
+    margin: 0; /* eliminar centrado */
   }
-  a:hover {
-    color: #747bff;
+}
+
+.dashboard-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* 👈 fuerza la alineación a la izquierda */
+  gap: 0.75em;
+  padding: 1em;
+  border-radius: 16px;
+  background-color: var(--primary);
+  color: white;
+  font-size: 1.1em;
+  font-weight: 600;
+  box-shadow: 0 4px 6px var(--shadow);
+  transition: transform 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+/* Íconos */
+.dashboard-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .dashboard-button {
+    font-size: 1em;
+    padding: 0.9em 1.2em;
+  }
+
+  .dashboard-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (min-width: 768px) {
+  .dashboard-button {
+    padding: 1em 1.5em;
+  }
+
+  .dashboard-icon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* 📱 Barra inferior */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--card-bg);
+  box-shadow: 0 -2px 8px var(--shadow);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.75em 0;
+  z-index: 100;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+.bottom-nav button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 1.5em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+.bottom-nav button:hover {
+  transform: scale(1.2);
+}
+
+/* 🧁 Splash */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  background-color: var(--bg-light);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  animation: fadeSlideUp 0.8s ease-out;
+  z-index: 999;
+}
+.splash-title {
+  font-family: "Pacifico", cursive;
+  font-size: 2.5em;
+  color: var(--primary);
+  margin-top: 1em;
+}
+.cupcake-icon {
+  width: 100px;
+  height: 100px;
+  animation: spinCupcake 2s linear infinite;
+}
+
+/* 👤 Perfil */
+.profile-card {
+  animation: fadeSlideUp 0.8s ease-out;
+  text-align: center;
+  padding: 2em;
+}
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 8px var(--shadow);
+  margin-bottom: 1em;
+  transition: transform 0.3s ease;
+}
+.profile-avatar:hover {
+  transform: scale(1.05);
+}
+.profile-name {
+  font-family: "Pacifico", cursive;
+  font-size: 2em;
+  color: var(--primary);
+  margin-bottom: 0.25em;
+}
+.profile-email {
+  font-size: 1em;
+  color: var(--text-dark);
+  margin-bottom: 1em;
+}
+.profile-badge {
+  background-color: var(--accent);
+  color: white;
+  padding: 0.4em 1em;
+  border-radius: 12px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 1.5em;
+}
+.profile-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 2em;
+  font-size: 1.1em;
+}
+.profile-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+}
+
+/* 🧾 Ingredientes */
+.ingredient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+.ingredient-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: var(--card-bg);
+  padding: 1em;
+}
+.ingredient-image {
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
+/* Remover imagen */
+.remove-image-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: var(--accent);
+  border: none;
+  border-radius: 50%;
+  padding: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px var(--shadow);
+  transition: transform 0.2s ease, background-color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.remove-image-button svg {
+  width: 18px;
+  height: 18px;
+  fill: white;
+}
+.remove-image-button:hover {
+  background-color: var(--primary);
+  transform: scale(1.1);
+}
+
+/* 🧠 Login fondo */
+.login-background {
+  position: fixed;
+  inset: 0;
+  background-image: url("../assets/icons/cupcake.png");
+  background-repeat: repeat;
+  background-size: 80px;
+  opacity: 0.05;
+  z-index: -1;
+}
+
+/* 📱 Responsive */
+@media (max-width: 600px) {
+  h1,
+  .card-title {
+    font-size: 2em;
   }
   button {
-    background-color: #f9f9f9;
+    font-size: 1em;
+    padding: 0.8em 1.2em;
+  }
+  .card {
+    padding: 1em;
+  }
+}
+
+@media (min-width: 768px) {
+  .button-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1em;
+  }
+  .dashboard-button {
+    justify-content: flex-start;
+    padding: 1em 1.5em;
+  }
+  .dashboard-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .ingredient-card {
+    flex-direction: row;
+    gap: 1em;
+    align-items: center;
+  }
+  .ingredient-image {
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+    background-color: #fff;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ingredient-card > div {
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
   }
 }

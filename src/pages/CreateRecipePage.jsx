@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { db, storage } from "../firebaseConfig";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/Button";
+import { CirclePlus, ArrowLeft, Save } from "lucide-react";
 
 const CreateRecipePage = () => {
   const [recipeName, setRecipeName] = useState("");
@@ -156,14 +158,17 @@ const CreateRecipePage = () => {
       <div className="flex flex-col h-screen overflow-y-auto">
         <h1 className="text-4xl font-bold mb-4">Crear Nueva Receta</h1>
 
-        <div className="mb-4">
-          <button
-            className="bg-red-500 text-white px-4 py-2 rounded mb-4"
+        <div className="flex">
+          <Button
+            className="dashboard-button"
             onClick={() => navigate("/dashboard")}
           >
-            Regresar al Dashboard
-          </button>
+            <ArrowLeft size={30} />
+            <span>Dashboard</span>
+          </Button>
         </div>
+
+        <br></br>
 
         <input
           type="text"
@@ -232,12 +237,10 @@ const CreateRecipePage = () => {
           onChange={(e) => setQuantityUsed(e.target.value)}
         />
 
-        <button
-          className="w-full mb-4 bg-blue-500 text-white p-2 rounded-md"
-          onClick={handleAddIngredient}
-        >
-          Añadir Ingrediente
-        </button>
+        <Button className="edit-button" onClick={handleAddIngredient}>
+          <CirclePlus size={30} />
+          <span>Añadir Ingrediente</span>
+        </Button>
 
         {/* Image upload section */}
         <div className="mb-4">
@@ -269,13 +272,14 @@ const CreateRecipePage = () => {
         />
 
         <div className="flex justify-between">
-          <button
-            className="w-1/2 bg-green-500 text-white p-2 rounded-md mr-2"
+          <Button
+            className="edit-button"
             onClick={handleSaveRecipe}
             disabled={loading}
           >
-            {loading ? "Guardando..." : "Guardar Receta"}
-          </button>
+            <Save size={30}></Save>
+            <span>{loading ? "Guardando..." : "Guardar Receta"}</span>
+          </Button>
         </div>
 
         {snackbarOpen && (

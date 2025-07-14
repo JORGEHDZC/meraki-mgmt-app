@@ -11,9 +11,11 @@ import {
 import { db, storage } from "../firebaseConfig"; // Import Firebase storage
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"; // Import Firebase storage functions
 import { Delete } from "@mui/icons-material";
+import { Button } from "../components/ui/Button";
+import { CirclePlus } from "lucide-react";
+
 import {
   TextField,
-  Button,
   Input,
   IconButton,
   Typography,
@@ -42,7 +44,6 @@ const EditRecipeByIDPage = () => {
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [newImage, setNewImage] = useState(null); // Estado para la nueva imagen
   const [uploading, setUploading] = useState(false); // Estado para manejar la carga de imágenes
-  const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   // Función para obtener la receta desde Firestore
@@ -185,13 +186,6 @@ const EditRecipeByIDPage = () => {
 
     uploadTask.on(
       "state_changed",
-      (snapshot) => {
-        setSnackbarMessage("La imagen está cargada...");
-        setSnackbarOpen(true);
-        setTimeout(() => {
-          setSnackbarOpen(false);
-        }, 1500);
-      },
       (error) => {
         console.error("Error uploading image:", error);
         setUploading(false);
@@ -410,14 +404,9 @@ const EditRecipeByIDPage = () => {
           variant="outlined"
         />
 
-        <Button
-          onClick={handleAddIngredient}
-          variant="contained"
-          color="primary"
-          fullWidth
-          className="mb-6"
-        >
-          Añadir Ingrediente
+        <Button onClick={handleAddIngredient} className="edit-button">
+          <CirclePlus size={30} />
+          <span>Añadir Ingrediente</span>
         </Button>
 
         {/* Subir imagen */}
@@ -428,36 +417,20 @@ const EditRecipeByIDPage = () => {
             fullWidth
             className="mb-2"
           />
-          <Button
-            onClick={handleImageUpload}
-            variant="contained"
-            color="primary"
-            fullWidth
-            disabled={uploading}
-          >
-            {uploading ? "Subiendo Imagen..." : "Subir Imagen"}
+          <Button onClick={handleImageUpload} className="edit-button">
+            <span>{uploading ? "Subiendo Imagen..." : "Subir Imagen"}</span>
           </Button>
         </Box>
 
         <Grid container spacing={2}>
           <Grid item xs={6}>
-            <Button
-              onClick={handleUpdate}
-              variant="contained"
-              color="success"
-              fullWidth
-            >
-              Actualizar
+            <Button onClick={handleUpdate} className="edit-button">
+              <span>Actualizar</span>
             </Button>
           </Grid>
           <Grid item xs={6}>
-            <Button
-              onClick={goBack}
-              variant="contained"
-              color="error"
-              fullWidth
-            >
-              Cancelar
+            <Button onClick={goBack} className="edit-button">
+              <span>Cancelar</span>
             </Button>
           </Grid>
         </Grid>
@@ -465,7 +438,6 @@ const EditRecipeByIDPage = () => {
 
       <Snackbar
         open={snackbarOpen}
-        message={snackbarMessage}
         autoHideDuration={1500}
         onClose={() => setSnackbarOpen(false)}
       />
