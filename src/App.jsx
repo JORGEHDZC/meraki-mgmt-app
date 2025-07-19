@@ -13,7 +13,6 @@ import EditRecipeByIDPage from "./pages/EditRecipeByIDPage";
 import IngredientsPage from "./pages/IngredientsPage";
 import { Container } from "@mui/material";
 import PrivateRoute from "./context/PrivateRoute";
-import Profile from "./pages/Profile";
 import "./styles/globals.css";
 
 const App = () => {
@@ -34,7 +33,7 @@ const App = () => {
                 </PrivateRoute>
               }
             />
-            <Route path="/profile" element={<Profile />} />
+
             <Route
               path="/dashboard"
               element={

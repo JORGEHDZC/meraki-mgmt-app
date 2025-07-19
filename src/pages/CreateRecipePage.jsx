@@ -197,6 +197,9 @@ const CreateRecipePage = () => {
             <option value="cookie">Cookie</option>
             <option value="cake">Cake</option>
             <option value="cupcake">Cupcake</option>
+            <option value="frosting">Frosting/Relleno</option>
+            <option value="baker">Pan</option>
+            <option value="jello">Gelatina</option>
           </select>
         </div>
 

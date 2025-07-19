@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebaseConfig";
 import { ArrowLeft, CirclePlus, ArrowRight } from "lucide-react";
@@ -9,7 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  query,
+  writeBatch,
 } from "firebase/firestore";
 import {
   getStorage,
@@ -17,23 +17,22 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from "firebase/storage";
-
 import { Button } from "../components/ui/Button";
+import Fuse from "fuse.js";
 
-const normalizeIngredient = (ingredient) => {
-  return ingredient
+const normalizeIngredient = (ingredient) =>
+  ingredient
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\p{Diacritic}/gu, "")
     .trim();
-};
 
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const [quantity, setQuantity] = useState(0);
   const [unit, setUnit] = useState("gramos");
-  const [cost, setCost] = useState("");
+  const [cost, setCost] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [ingredientToEdit, setIngredientToEdit] = useState("");
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -52,13 +51,31 @@ export default function IngredientsPage() {
   const ingredientsCollectionRef = collection(db, "ingredients");
   const itemsPerPage = 10;
 
+  const fetchIngredients = async () => {
+    const data = await getDocs(ingredientsCollectionRef);
+    setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+  };
+
+  const fuse = useMemo(() => {
+    return new Fuse(ingredients, {
+      keys: ["name"],
+      threshold: 0.3,
+      ignoreLocation: true,
+      isCaseSensitive: false,
+      useExtendedSearch: true,
+    });
+  }, [ingredients]);
+
   useEffect(() => {
-    const fetchIngredients = async () => {
-      const data = await getDocs(ingredientsCollectionRef);
-      setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    };
     fetchIngredients();
   }, []);
+
+  useEffect(() => {
+    if (snackbarOpen) {
+      const timer = setTimeout(() => setSnackbarOpen(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [snackbarOpen]);
 
   const handleSaveIngredient = async () => {
     if (!currentIngredient.trim()) {
@@ -66,13 +83,11 @@ export default function IngredientsPage() {
       setSnackbarOpen(true);
       return;
     }
-
     if (!quantity || isNaN(quantity) || quantity <= 0) {
       setSnackbarMessage("La cantidad debe ser un número positivo");
       setSnackbarOpen(true);
       return;
     }
-
     if (isNaN(cost) || cost < 0) {
       setSnackbarMessage("El costo debe ser un número positivo");
       setSnackbarOpen(true);
@@ -85,12 +100,14 @@ export default function IngredientsPage() {
 
     try {
       if (imageFile) {
-        if (!imageFile.type.startsWith("image/")) {
-          setSnackbarMessage("El archivo debe ser una imagen.");
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (!allowedTypes.includes(imageFile.type)) {
+          setSnackbarMessage(
+            "Tipo de imagen no permitido. Usa JPEG, PNG o WebP."
+          );
           setSnackbarOpen(true);
           return;
         }
-
         if (imageFile.size > 2 * 1024 * 1024) {
           setSnackbarMessage("La imagen es demasiado grande. Máximo 2MB.");
           setSnackbarOpen(true);
@@ -139,10 +156,24 @@ export default function IngredientsPage() {
           unit,
           ...(imageUrl && { imageUrl }),
         });
-        await handleUpdateIngredientCostOrQuantity(
+        await updateRecipesWithModifiedIngredient(
           ingredientToEdit,
           cost,
           quantity
+        );
+        setIngredients((prev) =>
+          prev.map((ing) =>
+            ing.id === ingredientToEdit
+              ? {
+                  ...ing,
+                  name: currentIngredient.trim(),
+                  quantity,
+                  cost,
+                  unit,
+                  ...(imageUrl && { imageUrl }),
+                }
+              : ing
+          )
         );
         setSnackbarMessage(`${currentIngredient} actualizado correctamente`);
       } else {
@@ -154,30 +185,36 @@ export default function IngredientsPage() {
           setSnackbarOpen(true);
           return;
         }
-
-        await addDoc(ingredientsCollectionRef, {
+        const newDoc = await addDoc(ingredientsCollectionRef, {
           name: currentIngredient.trim(),
           quantity,
           cost,
           unit,
           imageUrl,
         });
+        setIngredients((prev) => [
+          ...prev,
+          {
+            id: newDoc.id,
+            name: currentIngredient.trim(),
+            quantity,
+            cost,
+            unit,
+            imageUrl,
+          },
+        ]);
         setSnackbarMessage(`${currentIngredient} agregado correctamente`);
       }
 
-      const data = await getDocs(ingredientsCollectionRef);
-      setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-
       setCurrentIngredient("");
-      setQuantity("");
-      setCost("");
+      setQuantity(0);
+      setCost(0);
       setImageFile(null);
       setPreviewUrl(null);
       setUnit("gramos");
       setEditMode(false);
       setIngredientToEdit("");
       setSnackbarOpen(true);
-      setTimeout(() => setSnackbarOpen(false), 1500);
     } catch (error) {
       console.error("Error al guardar el ingrediente:", error);
       setSnackbarMessage("Ocurrió un error al guardar el ingrediente.");
@@ -186,10 +223,47 @@ export default function IngredientsPage() {
     }
   };
 
+  const updateRecipesWithModifiedIngredient = async (id, newCost, newQty) => {
+    const snapshot = await getDocs(collection(db, "recepies"));
+    const batch = writeBatch(db);
+
+    snapshot.docs.forEach((recipeDoc) => {
+      const data = recipeDoc.data();
+      const original = JSON.stringify(data.ingredients_list);
+
+      const updatedIngredients = data.ingredients_list.map((ing) => {
+        if (ing.ingredient_id === id) {
+          const costByQty = ((newCost / newQty) * ing.quantity_used).toFixed(2);
+          return {
+            ...ing,
+            cost: newCost,
+            quantity: newQty,
+            cost_by_quantity_used: costByQty,
+          };
+        }
+        return ing;
+      });
+
+      if (JSON.stringify(updatedIngredients) !== original) {
+        const totalCost = updatedIngredients
+          .reduce((sum, ing) => sum + parseFloat(ing.cost_by_quantity_used), 0)
+          .toFixed(2);
+
+        const docRef = doc(db, "recepies", recipeDoc.id);
+        batch.update(docRef, {
+          ingredients_list: updatedIngredients,
+          cost_recipe: totalCost,
+        });
+      }
+    });
+
+    await batch.commit();
+  };
+
   const handleEditIngredient = (ingredient) => {
     setCurrentIngredient(ingredient.name);
-    setQuantity(ingredient.quantity || "");
-    setCost(ingredient.cost || "");
+    setQuantity(ingredient.quantity || 0);
+    setCost(ingredient.cost || 0);
     setUnit(ingredient.unit || "gramos");
     setEditMode(true);
     setIngredientToEdit(ingredient.id);
@@ -198,8 +272,9 @@ export default function IngredientsPage() {
   const handleDeleteIngredient = async () => {
     const ingredientDoc = doc(db, "ingredients", ingredientToDelete);
     await deleteDoc(ingredientDoc);
-    const data = await getDocs(ingredientsCollectionRef);
-    setIngredients(data.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    setIngredients((prev) =>
+      prev.filter((ing) => ing.id !== ingredientToDelete)
+    );
     setSnackbarMessage("Ingrediente eliminado correctamente");
     setOpenModal(false);
     setSnackbarOpen(true);
@@ -207,26 +282,31 @@ export default function IngredientsPage() {
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    const filtered = ingredients.filter((ing) =>
-      ing.name.toLowerCase().includes(e.target.value.toLowerCase())
-    );
-    setNoResultsMessage(
-      filtered.length === 0 && e.target.value.trim() !== ""
-        ? `${e.target.value} no existe, favor de agregarlo`
-        : ""
-    );
+    setCurrentPage(1); // Resetea a página 1 cuando buscas
   };
 
-  const filteredIngredients = ingredients
-    .filter((ing) => ing.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const filteredIngredients = useMemo(() => {
+    if (!searchQuery.trim()) return ingredients;
+    return fuse.search(searchQuery).map(({ item }) => item);
+  }, [searchQuery, fuse, ingredients]);
+
+  const sortedIngredients = useMemo(() => {
+    return [...filteredIngredients].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+  }, [filteredIngredients]);
+
+  useEffect(() => {
+    if (searchQuery.trim() !== "" && filteredIngredients.length === 0) {
+      setNoResultsMessage(`${searchQuery} no existe, favor de agregarlo`);
+    } else {
+      setNoResultsMessage("");
+    }
+  }, [searchQuery, filteredIngredients]);
 
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
-  const currentIngredients = filteredIngredients.slice(
-    indexOfFirst,
-    indexOfLast
-  );
+  const currentIngredients = sortedIngredients.slice(indexOfFirst, indexOfLast);
 
   const handlePageChange = (dir) => {
     setCurrentPage((prev) =>
@@ -242,42 +322,6 @@ export default function IngredientsPage() {
   const closeDeleteModal = () => {
     setOpenModal(false);
     setIngredientToDelete("");
-  };
-
-  const updateRecipesWithModifiedIngredient = async (id, newCost, newQty) => {
-    const q = query(collection(db, "recepies"));
-    const snapshot = await getDocs(q);
-
-    for (const recipeDoc of snapshot.docs) {
-      const data = recipeDoc.data();
-      const updatedIngredients = data.ingredients_list.map((ing) => {
-        if (ing.ingredient_id === id) {
-          const costByQty = ((newCost / newQty) * ing.quantity_used).toFixed(2);
-          return {
-            ...ing,
-            cost: newCost,
-            quantity: newQty,
-            cost_by_quantity_used: costByQty,
-          };
-        }
-        return ing;
-      });
-
-      const totalCost = updatedIngredients
-        .reduce((sum, ing) => sum + parseFloat(ing.cost_by_quantity_used), 0)
-        .toFixed(2);
-
-      if (data.ingredients_list.some((ing) => ing.ingredient_id === id)) {
-        await updateDoc(doc(db, "recepies", recipeDoc.id), {
-          ingredients_list: updatedIngredients,
-          cost_recipe: totalCost,
-        });
-      }
-    }
-  };
-
-  const handleUpdateIngredientCostOrQuantity = async (id, cost, qty) => {
-    await updateRecipesWithModifiedIngredient(id, cost, qty);
   };
 
   return (
@@ -413,12 +457,6 @@ export default function IngredientsPage() {
               </div>
             )}
 
-            {isUploading && (
-              <p style={{ color: "var(--primary)", fontWeight: "bold" }}>
-                Subiendo imagen... 🍰
-              </p>
-            )}
-
             <Button onClick={handleSaveIngredient} className="edit-button">
               <CirclePlus size={30} />
               <span>
@@ -510,7 +548,7 @@ export default function IngredientsPage() {
               onClick={() => handlePageChange("prev")}
               disabled={currentPage === 1}
             >
-              <ArrowLeft size={30}></ArrowLeft>
+              <ArrowLeft size={30} />
               <span>Anterior</span>
             </Button>
             <span>Página {currentPage}</span>
@@ -519,7 +557,7 @@ export default function IngredientsPage() {
               disabled={indexOfLast >= filteredIngredients.length}
             >
               <span>Siguiente</span>
-              <ArrowRight size={30}></ArrowRight>
+              <ArrowRight size={30} />
             </Button>
           </div>
         </div>

@@ -1,12 +1,25 @@
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { getFirestore, collection, addDoc, deleteDoc, getDocs, doc, updateDoc } from 'firebase/firestore';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  deleteDoc,
+  getDocs,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 
 // Función para registrar al usuario en la colección de "pendingUsers"
 export const registerService = async (email, password) => {
   const db = getFirestore();
   try {
     // Almacena los datos en una colección "pendingUsers" en Firestore para aprobación
-    await addDoc(collection(db, 'pendingUsers'), {
+    await addDoc(collection(db, "pendingUsers"), {
       email,
       password, // Considera encriptar el password en un proyecto real
       approved: false,
@@ -14,7 +27,7 @@ export const registerService = async (email, password) => {
     });
     return true;
   } catch (error) {
-    console.error('Error al registrar el usuario para aprobación:', error);
+    console.error("Error al registrar el usuario para aprobación:", error);
     return false;
   }
 };
@@ -23,7 +36,11 @@ export const registerService = async (email, password) => {
 export const loginService = async (email, password) => {
   const auth = getAuth();
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
     const token = await userCredential.user.getIdToken();
     return { token };
   } catch (error) {
@@ -45,14 +62,14 @@ export const logoutService = async () => {
 export const getPendingUsers = async () => {
   const db = getFirestore();
   try {
-    const querySnapshot = await getDocs(collection(db, 'pendingUsers'));
-    const pendingUsers = querySnapshot.docs.map(doc => ({
+    const querySnapshot = await getDocs(collection(db, "pendingUsers"));
+    const pendingUsers = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
     return pendingUsers;
   } catch (error) {
-    console.error('Error al obtener usuarios pendientes:', error);
+    console.error("Error al obtener usuarios pendientes:", error);
     return [];
   }
 };
@@ -63,22 +80,26 @@ export const approveUserService = async (user) => {
   const auth = getAuth();
   try {
     // Crear la cuenta del usuario en Firebase Authentication
-    const userCredential = await createUserWithEmailAndPassword(auth, user.email, user.password);
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      user.email,
+      user.password
+    );
 
     // Mover el usuario a la colección "approvedUsers" en Firestore
-    await addDoc(collection(db, 'approvedUsers'), {
+    await addDoc(collection(db, "approvedUsers"), {
       email: user.email,
       approvedAt: new Date(),
       active: true,
-      uid: userCredential.user.uid // Guardamos el UID del usuario creado en Authentication
+      uid: userCredential.user.uid, // Guardamos el UID del usuario creado en Authentication
     });
 
     // Eliminar el usuario de la colección "pendingUsers"
-    await deleteDoc(doc(db, 'pendingUsers', user.id));
+    await deleteDoc(doc(db, "pendingUsers", user.id));
 
     return true; // Si todo sale bien, retornamos true
   } catch (error) {
-    console.error('Error al aprobar el usuario:', error);
+    console.error("Error al aprobar el usuario:", error);
     throw error;
   }
 };
@@ -87,7 +108,7 @@ export const approveUserService = async (user) => {
 export const setInactiveService = async (userId) => {
   const db = getFirestore();
   try {
-    const userRef = doc(db, 'approvedUsers', userId);
+    const userRef = doc(db, "approvedUsers", userId);
     await updateDoc(userRef, { active: false });
     console.log(`Usuario con ID ${userId} ha sido marcado como inactivo.`);
   } catch (error) {
@@ -99,7 +120,7 @@ export const setInactiveService = async (userId) => {
 export const deleteApprovedUserService = async (userId) => {
   const db = getFirestore();
   try {
-    await deleteDoc(doc(db, 'approvedUsers', userId));
+    await deleteDoc(doc(db, "approvedUsers", userId));
     console.log(`Usuario con ID ${userId} ha sido eliminado de approvedUsers.`);
   } catch (error) {
     console.error("Error al eliminar el usuario:", error);

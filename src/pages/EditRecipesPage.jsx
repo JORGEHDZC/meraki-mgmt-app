@@ -1,27 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   collection,
   getDocs,
   doc,
   deleteDoc,
   addDoc,
-} from "firebase/firestore"; // Importar `addDoc`
-import { db } from "../firebaseConfig"; // Tu archivo de configuración Firebase
+} from "firebase/firestore";
+import { db } from "../firebaseConfig";
 import { useNavigate } from "react-router-dom";
+import Fuse from "fuse.js";
 import { Pencil, CircleX, CopyPlus, CirclePlus, ArrowLeft } from "lucide-react";
 import { Button } from "../components/ui/Button";
 
 const EditRecipesPage = () => {
-  const [recipes, setRecipes] = useState([]); // Estado para almacenar todas las recetas
-  const [filteredRecipes, setFilteredRecipes] = useState([]); // Estado para recetas filtradas
-  const [openModal, setOpenModal] = useState(false); // Estado para controlar el modal
-  const [recipeToDelete, setRecipeToDelete] = useState(null); // Estado para la receta a eliminar
-  const [searchQuery, setSearchQuery] = useState(""); // Estado para búsqueda
-  const [currentPage, setCurrentPage] = useState(1); // Estado para la página actual
-  const recipesPerPage = 5; // Cantidad de recetas por página
-  const navigate = useNavigate(); // Hook de navegación
+  const [recipes, setRecipes] = useState([]);
+  const [filteredRecipes, setFilteredRecipes] = useState([]);
+  const [openModal, setOpenModal] = useState(false);
+  const [recipeToDelete, setRecipeToDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const recipesPerPage = 5;
+  const navigate = useNavigate();
 
-  // Función para obtener todas las recetas de la colección "recepies"
   const fetchRecipes = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "recepies"));
@@ -29,7 +29,6 @@ const EditRecipesPage = () => {
         id: doc.id,
         ...doc.data(),
       }));
-      // Ordenar las recetas por nombre en orden ascendente
       const sortedRecipes = fetchedRecipes.sort((a, b) =>
         a.recipe_name.localeCompare(b.recipe_name)
       );
@@ -40,38 +39,32 @@ const EditRecipesPage = () => {
     }
   };
 
-  // Función para eliminar una receta
   const handleDelete = async () => {
     if (recipeToDelete) {
       try {
         await deleteDoc(doc(db, "recepies", recipeToDelete));
-        setRecipes((prevRecipes) =>
-          prevRecipes.filter((recipe) => recipe.id !== recipeToDelete)
+        setRecipes((prev) => prev.filter((r) => r.id !== recipeToDelete));
+        setFilteredRecipes((prev) =>
+          prev.filter((r) => r.id !== recipeToDelete)
         );
-        setFilteredRecipes((prevRecipes) =>
-          prevRecipes.filter((recipe) => recipe.id !== recipeToDelete)
-        );
-        setOpenModal(false); // Cerrar el modal después de eliminar
-        setRecipeToDelete(null); // Reiniciar el estado de la receta a eliminar
+        setOpenModal(false);
+        setRecipeToDelete(null);
       } catch (error) {
         console.error("Error deleting recipe:", error);
       }
     }
   };
 
-  // Función para duplicar una receta
   const handleDuplicate = async (id) => {
-    const recipeToDuplicate = recipes.find((recipe) => recipe.id === id);
+    const recipeToDuplicate = recipes.find((r) => r.id === id);
     if (recipeToDuplicate) {
       const duplicatedRecipe = {
         ...recipeToDuplicate,
-        recipe_name: `${recipeToDuplicate.recipe_name} - duplicated`, // Añadir " - duplicated" al nombre
+        recipe_name: `${recipeToDuplicate.recipe_name} - duplicated`,
       };
-      delete duplicatedRecipe.id; // Eliminar el ID para que Firebase asigne uno nuevo
+      delete duplicatedRecipe.id;
       try {
-        // Guardar la receta duplicada en Firebase con un nuevo ID
         await addDoc(collection(db, "recepies"), duplicatedRecipe);
-        // Recargar recetas después de duplicar
         fetchRecipes();
       } catch (error) {
         console.error("Error duplicating recipe:", error);
@@ -79,35 +72,52 @@ const EditRecipesPage = () => {
     }
   };
 
-  // Función para abrir el modal de confirmación de eliminación
   const confirmDelete = (id) => {
     setRecipeToDelete(id);
     setOpenModal(true);
   };
 
-  // Función para cerrar el modal
   const closeModal = () => {
     setOpenModal(false);
     setRecipeToDelete(null);
   };
 
-  // Cargar todas las recetas cuando el componente se monte
   useEffect(() => {
     fetchRecipes();
   }, []);
 
-  // Función para manejar la búsqueda
+  const normalizeText = (text) =>
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .trim();
+
+  const fuse = useMemo(() => {
+    return new Fuse(recipes, {
+      keys: ["recipe_name"],
+      threshold: 0.4,
+      ignoreLocation: true,
+      includeScore: false,
+      useExtendedSearch: true,
+    });
+  }, [recipes]);
+
   const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
+    const value = e.target.value;
     setSearchQuery(value);
-    const filtered = recipes.filter((recipe) =>
-      recipe.recipe_name.toLowerCase().includes(value)
-    );
-    setFilteredRecipes(filtered);
-    setCurrentPage(1); // Reiniciar a la primera página cuando se busca
+
+    if (!value.trim()) {
+      setFilteredRecipes(recipes);
+    } else {
+      const result = fuse.search(normalizeText(value));
+      const matches = result.map((res) => res.item);
+      setFilteredRecipes(matches);
+    }
+
+    setCurrentPage(1);
   };
 
-  // Paginar las recetas
   const indexOfLastRecipe = currentPage * recipesPerPage;
   const indexOfFirstRecipe = indexOfLastRecipe - recipesPerPage;
   const currentRecipes = filteredRecipes.slice(
@@ -115,7 +125,6 @@ const EditRecipesPage = () => {
     indexOfLastRecipe
   );
 
-  // Cambiar de página
   const handlePageChange = (value) => {
     setCurrentPage(value);
   };
@@ -163,14 +172,25 @@ const EditRecipesPage = () => {
                   key={recipe.id}
                   className="card flex flex-col md:flex-row md:items-center justify-between p-4"
                 >
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--primary)]">
-                      <span className="font-bold">{recipe.recipe_name}</span>
-                    </h3>
-                    <p className="text-gray-600">
-                      Costo:{" "}
-                      <span className="font-bold">${recipe.cost_recipe}</span>
-                    </p>
+                  <div className="flex items-center gap-4">
+                    {recipe.image_url && (
+                      <div className="w-[100px] h-[100px] overflow-hidden rounded shadow">
+                        <img
+                          src={recipe.image_url}
+                          alt={recipe.recipe_name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="text-lg font-semibold text-[var(--primary)]">
+                        <span className="font-bold">{recipe.recipe_name}</span>
+                      </h3>
+                      <p className="text-gray-600">
+                        Costo:{" "}
+                        <span className="font-bold">${recipe.cost_recipe}</span>
+                      </p>
+                    </div>
                   </div>
                   <div className="flex gap-3 mt-2 md:mt-0">
                     <button
@@ -200,7 +220,6 @@ const EditRecipesPage = () => {
             </div>
           )}
 
-          {/* Paginación */}
           <div className="flex justify-center items-center gap-4 mt-6">
             <Button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -220,7 +239,6 @@ const EditRecipesPage = () => {
           </div>
         </div>
 
-        {/* Modal de confirmación */}
         {openModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded shadow-md max-w-sm w-full">
